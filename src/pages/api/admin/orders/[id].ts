@@ -7,6 +7,8 @@ import {
   unfulfillOrder,
   type ShippingAddress,
   resolveInventoryException,
+  markLocalOrderPaid,
+  cancelLocalOrder,
 } from '../../../../features/orders/db';
 import { getSecret } from '../../../../features/secrets/store';
 import { setSetting } from '../../../../features/settings/db';
@@ -49,6 +51,7 @@ import { getStoreSettings } from '../../../../features/settings/db';
 import { shouldSendCustomerOrderEmail } from '../../../../features/email/orderPolicy';
 import { getPaymentProvider, type PaymentMethod } from '../../../../features/payments';
 import { formatPrice } from '../../../../config';
+import { purgeStockProductCache } from '../../../../features/cache/purge';
 import { parseOrderOrLegacyPublicId, parsePublicId } from '../../../../features/ids/publicId';
 
 export const prerender = false;
@@ -90,6 +93,19 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
     if (!exceptionId) return fail('Invalid inventory exception.');
     const resolved = await resolveInventoryException(env.DB, id, exceptionId);
     return resolved ? notice('Inventory exception marked reconciled.') : fail('That inventory exception is already resolved or does not belong to this order.');
+  }
+
+  if (action === 'mark_local_paid') {
+    return (await markLocalOrderPaid(env.DB, id))
+      ? notice('Payment marked as received.')
+      : fail('Only an unpaid COD/bank-transfer order can be marked paid.');
+  }
+
+  if (action === 'cancel_local_order') {
+    const result = await cancelLocalOrder(env.DB, id);
+    if (!result.cancelled) return fail('Only an unpaid COD/bank-transfer order can be cancelled.');
+    await purgeStockProductCache(result.productPublicIds);
+    return notice('Order cancelled and inventory restored.');
   }
 
   // Rotate the guest access token and email the customer the replacement link.

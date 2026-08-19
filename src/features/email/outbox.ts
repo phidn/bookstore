@@ -20,6 +20,8 @@ import { orderConfirmationEmail, orderNotificationEmail, orderShippedEmail } fro
 import { guestLinkReissueEmail } from './guestLinkReissue';
 import { guestOrderUrl, getGuestAccess, sweepAbandonedGuestAccess } from '../orders/guestAccess.ts';
 import { shouldSendCustomerOrderEmail } from './orderPolicy';
+import { env } from 'cloudflare:workers';
+import { sendTelegramOrderAlert } from '../telegram/notify';
 
 /**
  * Transactional-email outbox (see migration 0032). recordPaidOrder commits one
@@ -109,6 +111,21 @@ export async function deliverOrderNotifications(
         }
         // Email is off for this store: not-applicable, not a failure.
         await markSkipped(db, orderId, kind, attempts);
+        // Telegram is a separate channel — fire it even when email is off.
+        if (kind === 'owner-notification' && env.TELEGRAM_BOT_TOKEN && s.telegramChatId) {
+          order ??= await getOrder(db, orderId);
+          if (order) {
+            const tgItems = await listOrderItemsWithImages(db, orderId);
+            const tgStoreName = s.storeName || getConfig().storeName;
+            sendTelegramOrderAlert(
+              { botToken: env.TELEGRAM_BOT_TOKEN, chatId: s.telegramChatId, threadId: s.telegramThreadId },
+              order,
+              tgItems,
+              tgStoreName,
+              origin,
+            ).catch((err) => console.error('Telegram alert (no-email path) error:', err));
+          }
+        }
         continue;
       }
       order ??= await getOrder(db, orderId);
@@ -191,6 +208,19 @@ export async function deliverOrderNotifications(
       // fallback is only for pre-0005 legacy rows without one.
       await emailer.send({ ...msg, idempotencyKey: `${kind}/${order.public_id ?? orderId}` });
       await markSent(db, orderId, kind, attempts);
+
+      // Telegram side-channel: best-effort ping alongside the email.
+      // Never throws — a Telegram failure must not affect the email outbox state.
+      if (kind === 'owner-notification' && env.TELEGRAM_BOT_TOKEN && s.telegramChatId) {
+        items ??= await listOrderItemsWithImages(db, orderId);
+        sendTelegramOrderAlert(
+          { botToken: env.TELEGRAM_BOT_TOKEN, chatId: s.telegramChatId, threadId: s.telegramThreadId },
+          order,
+          items,
+          storeName,
+          origin,
+        ).catch((err) => console.error('Telegram alert (post-send) error:', err));
+      }
     } catch (err) {
       console.error(`Order notification ${kind}/${order?.public_id ?? '(unresolved order)'} failed:`, err);
       await markFailed(db, orderId, kind, attempts, err);

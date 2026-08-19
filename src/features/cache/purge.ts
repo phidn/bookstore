@@ -19,9 +19,9 @@ function purgeFailure(
 }
 
 /**
- * Invalidate low-frequency content mutations synchronously after their D1
- * write. A failed tag purge falls back to the whole entrypoint cache; if that
- * also fails, the handler fails rather than silently accepting stale content.
+ * Invalidate low-frequency content mutations after their D1 write.
+ * A failed tag purge falls back to the whole entrypoint cache; if that also fails,
+ * log the failure rather than crashing an already-saved mutation.
  */
 export async function purgeCacheTags(
   tags: Iterable<string>,
@@ -45,8 +45,6 @@ export async function purgeCacheTags(
   } catch (error) {
     purgeFailure('everything', error instanceof Error ? error.message : String(error));
   }
-
-  throw new Error('The data was saved, but the Workers cache could not be invalidated.');
 }
 
 export function purgeProductCache(

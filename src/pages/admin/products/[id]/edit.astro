@@ -30,6 +30,7 @@ const categoryOptions = flattenTree(buildTree(await listCategories(env.DB)));
 const selectedCategoryIds = (await categoriesForProduct(env.DB, product.id)).map((c) => c.id);
 const images = await listProductImages(env.DB, product.id);
 const error = Astro.url.searchParams.get('error');
+const saved = Astro.url.searchParams.has('saved');
 
 // Variants + extras (show all, including any inactive, so the admin sees everything).
 const variants = await listVariants(env.DB, product.id, true);
@@ -72,6 +73,13 @@ const weightRequired = zonesRequireWeight(shippingFor(Astro.locals.settings).con
       View on store ↗
     </a>
   </div>
+  {
+    saved && !error && (
+      <p class="mb-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        Saved changes.
+      </p>
+    )
+  }
   <ProductForm
     action={`/api/admin/products/${product.public_id}`}
     submitLabel="Save changes"

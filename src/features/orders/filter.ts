@@ -15,7 +15,7 @@ export interface OrderFilters {
   review: boolean;
 }
 
-export type OrderStatusFilter = 'paid' | 'partially_refunded' | 'refunded' | 'pending';
+export type OrderStatusFilter = 'paid' | 'partially_refunded' | 'refunded' | 'pending' | 'cancelled';
 
 /**
  * Payment states, as a merchant thinks of them.
@@ -31,6 +31,7 @@ const STATUS: Record<OrderStatusFilter, string> = {
   partially_refunded: 'refunded_cents > 0 AND refunded_cents < amount_total_cents',
   refunded: 'refunded_cents > 0 AND refunded_cents >= amount_total_cents',
   pending: "status = 'pending'",
+  cancelled: "status = 'cancelled'",
 };
 
 export const ORDER_STATUS_OPTIONS: { value: OrderStatusFilter; label: string }[] = [
@@ -38,6 +39,7 @@ export const ORDER_STATUS_OPTIONS: { value: OrderStatusFilter; label: string }[]
   { value: 'partially_refunded', label: 'Partially refunded' },
   { value: 'refunded', label: 'Refunded' },
   { value: 'pending', label: 'Unpaid' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 export const ORDER_METHOD_OPTIONS: { value: string; label: string }[] = [
@@ -45,6 +47,8 @@ export const ORDER_METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: 'lightning', label: 'Lightning' },
   { value: 'opennode', label: 'Bitcoin (OpenNode)' },
   { value: 'demo', label: 'Demo' },
+  { value: 'cod', label: 'COD' },
+  { value: 'bank_transfer', label: 'Chuyển khoản' },
 ];
 
 const isStatus = (v: string | null): v is OrderStatusFilter =>

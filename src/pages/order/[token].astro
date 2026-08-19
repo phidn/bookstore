@@ -9,6 +9,7 @@ import { isAccessToken } from '../../features/ids/token.ts';
 import { resolveAccessToken } from '../../features/orders/guestAccess.ts';
 import { clearCart } from '../../features/cart/cart';
 import { catalogPath } from '../../features/settings/home';
+import { localCommerce } from '../../local-commerce';
 
 // Guest access: new orders are addressed ONLY by their otk_ access token
 // (resolved through the registry); legacy orders keep their pre-cutover
@@ -42,12 +43,25 @@ const orderRef = order
   ? (publicIdToken(order.public_id ?? '', 'order') ?? String(orderNumber(order.id, getConfig().orderNumber)))
   : null;
 
+let customerPhone = '';
+if (order?.ship_address) {
+  try {
+    const parsedAddr = JSON.parse(order.ship_address);
+    if (typeof parsedAddr?.phone === 'string') {
+      customerPhone = parsedAddr.phone.replace(/[^0-9+]/g, '').trim();
+    }
+  } catch {}
+}
+const transferNote = customerPhone ? `TVHT ${customerPhone}` : `TVHT ${orderRef ?? ''}`.trim();
+
 // Human label for the rail the order was paid on (NULL = legacy, hidden).
 const PAYMENT_LABELS: Record<string, string> = {
   stripe: 'Card',
   lightning: 'Lightning',
   opennode: 'Bitcoin',
   demo: 'Demo (no charge)',
+  cod: 'Thanh toán khi giao hàng (COD)',
+  bank_transfer: 'Chuyển khoản Techcombank',
 };
 const paymentLabel = order?.payment_method ? PAYMENT_LABELS[order.payment_method] ?? null : null;
 // The catalog is at / until the home page is pointed elsewhere.
@@ -58,7 +72,9 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
   {
     order ? (
       <Fragment>
-        <h1 class="mb-2 font-serif text-3xl tracking-tight sm:text-4xl">Thank you! Your order is confirmed.</h1>
+        <h1 class="mb-2 font-serif text-3xl tracking-tight sm:text-4xl">
+          {order.status === 'pending' ? 'Tiểu Viện đã nhận đơn của bạn.' : order.status === 'cancelled' ? 'Đơn hàng đã được hủy.' : 'Cảm ơn bạn! Đơn hàng đã được xác nhận.'}
+        </h1>
         <p class="mb-6 text-sm text-muted">
           Order #{orderRef}
           {order.email && <Fragment> · a receipt is on its way to {order.email}</Fragment>}
@@ -116,8 +132,22 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
             </ul>
           </section>
         )}
-        {paymentLabel && (
-          <p class="mt-1 text-sm text-muted">Paid with {paymentLabel}</p>
+        {paymentLabel && <p class="mt-1 text-sm text-muted">Phương thức thanh toán: {paymentLabel}</p>}
+        {order.status === 'pending' && order.payment_method === 'cod' && (
+          <p class="mt-3 rounded-md border border-line bg-surface p-4 text-sm">Tiểu Viện sẽ xác nhận đơn và giao nội thành TP.HCM. Bạn thanh toán khi nhận sách.</p>
+        )}
+        {order.status === 'pending' && order.payment_method === 'bank_transfer' && (
+          <div class="mt-5 grid gap-4 rounded-md border border-line bg-surface p-4 sm:grid-cols-[13rem_1fr] sm:items-center">
+            <img src={localCommerce.bankTransfer.cardImage} alt="Mã QR chuyển khoản Techcombank của DANG NHAT PHI" class="w-full rounded-md" />
+            <div class="text-sm">
+              <p class="font-semibold">Chuyển khoản Techcombank</p>
+              <p class="mt-2">Số tài khoản: <strong>{localCommerce.bankTransfer.accountNumber}</strong></p>
+              <p>Chủ tài khoản: <strong>{localCommerce.bankTransfer.accountName}</strong></p>
+              <p class="mt-3">Nội dung chuyển khoản:</p>
+              <code class="mt-1 inline-block rounded bg-paper px-3 py-2 text-base font-semibold">{transferNote}</code>
+              <p class="mt-2 text-muted">Vui lòng chuyển đúng tổng tiền và nội dung trên để Tiểu Viện xác nhận nhanh.</p>
+            </div>
+          </div>
         )}
         {/* Amounts only — the internal note is for the merchant, not the buyer. */}
         {order.refunded_cents > 0 && (

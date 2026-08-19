@@ -42,18 +42,25 @@ const { model } = Astro.props;
 }
 
 <header class="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
-  <div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5">
-    <a href="/" aria-label={model.storeName} class="font-serif text-2xl tracking-tight">
-      {
-        model.logo ? (
-          /* Not lazy: the header logo is above the fold on every page. The
-             store name stays the alt text, so the header still reads the
-             same to a screen reader or when the image fails. */
-          <img src={model.logo.src} alt={model.logo.alt} class="h-8 max-w-48 object-contain sm:h-10" />
-        ) : (
-          <span>{model.storeName}</span>
-        )
-      }
+  <div class="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4 sm:gap-6 sm:py-5">
+    <a
+      href="/"
+      aria-label={model.storeName}
+      class="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-serif text-base tracking-tight sm:text-2xl"
+    >
+      {model.logo && (
+        /* Keep the complete brand name visible beside the mark. The source
+           avatar has generous ivory breathing room, so the slight scale-up
+           lets its pavilion/book symbol read clearly at header size. */
+        <span class="h-9 w-9 shrink-0 overflow-hidden rounded-full sm:h-10 sm:w-10">
+          <img
+            src={model.logo.src}
+            alt={model.storeName}
+            class="h-full w-full scale-[1.38] object-cover"
+          />
+        </span>
+      )}
+      <span>{model.storeName}</span>
     </a>
     <StoreSearch
       action={model.search.action}

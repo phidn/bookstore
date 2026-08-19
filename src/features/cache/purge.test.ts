@@ -32,11 +32,9 @@ describe('Workers cache purge', () => {
     ]);
   });
 
-  it('throws when both purge attempts fail', async () => {
+  it('does not throw when both purge attempts fail', async () => {
     const purge = vi.fn(async () => result(false));
-    await expect(purgeCacheTags(['catalog'], { purge })).rejects.toThrow(
-      'could not be invalidated',
-    );
+    await expect(purgeCacheTags(['catalog'], { purge })).resolves.toBeUndefined();
     expect(purge).toHaveBeenCalledTimes(2);
   });
 

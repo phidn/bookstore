@@ -43,6 +43,8 @@ const PAYMENT_LABELS: Record<string, string> = {
   lightning: 'Lightning',
   opennode: 'Bitcoin (OpenNode)',
   demo: 'Demo (no charge)',
+  cod: 'Thanh toán khi giao hàng (COD)',
+  bank_transfer: 'Chuyển khoản Techcombank',
 };
 const paymentLabel = order.payment_method
   ? (PAYMENT_LABELS[order.payment_method] ?? order.payment_method)
@@ -135,6 +137,7 @@ const ship = order.ship_address
       state: string | null;
       postal: string | null;
       country: string | null;
+      phone?: string | null;
     })
   : null;
 // Domestic-only for now: international labels need a customs declaration this
@@ -211,6 +214,16 @@ const willEmailCustomer =
       <dd>{order.email ?? '—'}</dd>
     </div>
     <div>
+      <dt class="text-xs uppercase tracking-widest text-gray-400">Phone</dt>
+      <dd>
+        {ship?.phone ? (
+          <a href={`tel:${ship.phone.replace(/[^\d+]/g, '')}`} class="text-accent hover:underline">
+            {ship.phone}
+          </a>
+        ) : '—'}
+      </dd>
+    </div>
+    <div>
       <dt class="text-xs uppercase tracking-widest text-gray-400">Shipping</dt>
       <dd>
         {formatPrice(order.shipping_cents, order.currency)}
@@ -272,7 +285,24 @@ const willEmailCustomer =
     </div>
   </dl>
 
-  <RefundPanel order={order} timeZone={timeZone} />
+  {order.status === 'pending' && (order.payment_method === 'cod' || order.payment_method === 'bank_transfer') && (
+    <div class="mb-8 flex flex-wrap gap-3 rounded-lg border border-line p-5">
+      <form method="POST" action={`/api/admin/orders/${order.public_id}`}>
+        <input type="hidden" name="_action" value="mark_local_paid" />
+        <button type="submit" class="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover">
+          Mark payment received
+        </button>
+      </form>
+      <form method="POST" action={`/api/admin/orders/${order.public_id}`}>
+        <input type="hidden" name="_action" value="cancel_local_order" />
+        <button type="submit" class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+          Cancel order and restore stock
+        </button>
+      </form>
+    </div>
+  )}
+
+  {order.status === 'paid' && <RefundPanel order={order} timeZone={timeZone} />}
 
   <div class="mb-8 rounded-lg border border-line p-5">
     <h2 class="mb-3 text-xs uppercase tracking-widest text-gray-400">Fulfillment</h2>

@@ -29,7 +29,32 @@ function isCapabilityPayPath(pathname: string): boolean {
 export function isForbiddenFormOrigin(request: Request, url: URL): boolean {
   if (SAFE_METHODS.has(request.method)) return false;
 
-  const originMatches = request.headers.get('origin') === url.origin;
+  const originHeader = request.headers.get('origin');
+  let originMatches = originHeader === url.origin;
+
+  if (!originMatches && originHeader) {
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+    if (host) {
+      const proto = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
+      if (
+        originHeader === `${proto}://${host}` ||
+        originHeader === `http://${host}` ||
+        originHeader === `https://${host}`
+      ) {
+        originMatches = true;
+      }
+    }
+
+    if (!originMatches) {
+      try {
+        const parsed = new URL(originHeader);
+        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+          originMatches = true;
+        }
+      } catch {}
+    }
+  }
+
   if (!request.headers.has('content-type')) return !originMatches;
   if (!hasFormContentType(request.headers.get('content-type'))) return false;
   if (originMatches) return false;

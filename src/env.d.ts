@@ -114,5 +114,9 @@ declare namespace Cloudflare {
     // (The Resend API key is NOT an env var — it's set in the admin dashboard and
     // stored in the encrypted D1 vault. See features/secrets/store.ts.)
     EMAIL?: import('./features/email/cloudflare').EmailBinding;
+    // Telegram bot token for owner order-alert messages. Set with
+    // `wrangler secret put TELEGRAM_BOT_TOKEN`. Chat id + thread id are D1
+    // settings (telegram_chat_id, telegram_thread_id). Absent = no Telegram alerts.
+    TELEGRAM_BOT_TOKEN?: string;
   }
 }

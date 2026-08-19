@@ -7,6 +7,9 @@
  * Tailwind v4 turns each --color-* into utilities (bg-brand, text-accent, …)
  * and uses --font-sans / --radius-* as global defaults. See README → Theming.
  */
+
+/* Lora is loaded via a <link> preconnect in Layout.astro — see --font-serif below. */
+
 @theme {
   /* Primary brand — solid buttons, primary actions, focus ring */
   --color-brand: #111827;        /* swap for your brand color */
@@ -43,10 +46,10 @@
      contrast on every primary button at once. */
   --color-on-brand: #ffffff;
 
-  /* Typography — sans body + a characterful system serif for display (no webfont) */
+  /* Typography — Lora (Vietnamese-capable literary serif) + system sans */
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
-  --font-serif: 'Hoefler Text', 'Iowan Old Style', 'Palatino Linotype', Palatino,
+  --font-serif: 'Lora', 'Hoefler Text', 'Iowan Old Style', 'Palatino Linotype', Palatino,
     Georgia, 'Times New Roman', serif;
 
   /* Corner radius (Tailwind defaults, surfaced here for one-place editing) */
