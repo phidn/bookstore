@@ -89,6 +89,16 @@ const shell = buildShellModel({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Lora — Vietnamese-capable literary serif for the brand name and headings.
+        Preconnect hints are split: fonts.googleapis.com serves the CSS;
+        fonts.gstatic.com serves the binary font files. Both need early connections
+        to avoid a cold-start stall on first paint. */}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&subset=vietnamese&display=swap"
+    />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     {/* Declared so Safari stops probing the site root for it. Those probes are
@@ -107,11 +117,14 @@ const shell = buildShellModel({
     <meta property="og:description" content={desc} />
     <meta property="og:url" content={canonical} />
     {ogImage && <meta property="og:image" content={ogImage} />}
+    {ogImage && <meta property="og:image:width" content="1200" />}
+    {ogImage && <meta property="og:image:height" content="630" />}
 
     <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={desc} />
     {ogImage && <meta name="twitter:image" content={ogImage} />}
+    {ogImage && <meta name="twitter:image:alt" content={pageTitle} />}
 
     {/* Progressive image reveal, site-wide. The marker class is added in <head>,
         before any image markup is parsed, so incomplete images start on their

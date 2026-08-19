@@ -53,6 +53,9 @@ export type SettingKey =
   | 'lnbits_url' // LNbits node URL (the invoice/read key is in the vault)
   | 'phoenixd_url' // phoenixd node URL (the password is in the vault)
   | 'opennode_api_url' // OpenNode API base override (testnet); absent = live default
+  // Telegram owner-alert side-channel (bot token is a Worker secret: TELEGRAM_BOT_TOKEN).
+  | 'telegram_chat_id'    // numeric chat/supergroup id, e.g. "-1004416195653"; absent = disabled
+  | 'telegram_thread_id'  // topic/thread id inside a forum group; absent = no thread
   | `enc:${string}`; // AES-GCM-encrypted secret (see features/secrets/store.ts), e.g. 'enc:stripe_secret_key'. Never loaded as plaintext into locals.
 
 /** The storefront features that can be flipped at runtime (default on). */
@@ -129,6 +132,12 @@ export interface StoreSettings {
   phoenixdUrl: string | null;
   /** OpenNode API base override (testnet), or null for the live default. */
   opennodeApiUrl: string | null;
+  /** Telegram supergroup/channel id for owner order alerts (e.g. "-1004416195653").
+   *  Absent or null disables Telegram notifications. Bot token is the Worker secret
+   *  TELEGRAM_BOT_TOKEN (never stored in D1). */
+  telegramChatId: string | null;
+  /** Telegram forum topic/thread id. Null = send to the group's main chat. */
+  telegramThreadId: string | null;
 }
 
 /** One setting value, or null if unset. */
@@ -226,6 +235,8 @@ export function parseStoreSettings(
     lnbitsUrl: map.get('lnbits_url') ?? null,
     phoenixdUrl: map.get('phoenixd_url') ?? null,
     opennodeApiUrl: map.get('opennode_api_url') ?? null,
+    telegramChatId: map.get('telegram_chat_id') ?? null,
+    telegramThreadId: map.get('telegram_thread_id') ?? null,
   };
 }
 

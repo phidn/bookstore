@@ -19,6 +19,15 @@ import { themeCssPath, writeThemeArtifacts } from './scripts/theme-css.mjs';
 const theme = resolveTheme();
 writeThemeArtifacts();
 
+// `astro check`/`astro build` and `astro dev` may run side by side during local
+// work. If they share Vite's default cache directory, tooling can replace SSR files
+// while the dev worker still references their previous hashes, causing random
+// "file does not exist in deps_ssr" failures. Give diagnostics an isolated,
+// disposable cache so it can never invalidate the live storefront.
+const viteCacheDir = process.argv.includes('dev')
+  ? 'node_modules/.vite-dev'
+  : 'node_modules/.vite-tooling';
+
 // Stamp every build with the theme it was compiled for. The deploy scripts
 // refuse to ship an artifact whose stamp disagrees with the current
 // selection — without this, `deploy --skip-build` happily deploys whatever
@@ -48,10 +57,17 @@ export default defineConfig({
     // Keep Cloudflare Images opt-in. The adapter otherwise auto-provisions an
     // IMAGES binding even though minshop stores and serves originals from R2.
     imageService: 'passthrough',
-    platformProxy: { enabled: true },
+    remoteBindings: process.env.REMOTE_BINDINGS === 'true' || process.env.USE_PROD_DATA === 'true' || process.env.PROD_API === 'true',
   }),
   vite: {
+    cacheDir: viteCacheDir,
     plugins: [tailwindcss()],
+    // The /pay route imports the Lightning QR renderer alongside demo checkout.
+    // Keeping uqr out of Vite's SSR optimizer avoids stale hashed module paths
+    // when another Astro command refreshes node_modules/.vite during local dev.
+    optimizeDeps: {
+      exclude: ['uqr'],
+    },
     resolve: {
       alias: {
         '#theme': theme.dir,

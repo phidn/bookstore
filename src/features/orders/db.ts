@@ -13,6 +13,8 @@ export interface ShippingAddress {
   state: string | null;
   postal: string | null;
   country: string | null;
+  /** Local-order contact number; omitted for provider-hosted legacy orders. */
+  phone?: string | null;
 }
 
 export interface Order {
@@ -168,6 +170,8 @@ export interface PaidOrderInput {
   taxCents?: number;
   shippingAddress?: ShippingAddress | null;
   currency: string;
+  /** COD/bank-transfer orders are recorded before money changes hands. */
+  status?: 'paid' | 'pending';
   /** Which rail settled it ('stripe' | 'lightning' | 'opennode'). */
   paymentMethod?: string;
   /**
@@ -400,6 +404,80 @@ export async function listOrderItems(db: D1Database, orderId: number): Promise<O
   return results ?? [];
 }
 
+/** Confirm that money for a locally arranged COD/bank-transfer order was received. */
+export async function markLocalOrderPaid(db: D1Database, orderId: number): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `UPDATE orders SET status = 'paid'
+        WHERE id = ? AND status = 'pending' AND payment_method IN ('cod', 'bank_transfer')`,
+    )
+    .bind(orderId)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/**
+ * Cancel a still-unpaid local order and restore its stock exactly once.
+ * Stock updates run before the status transition and are guarded by `pending`;
+ * D1 batches are atomic, so a repeated cancel sees `cancelled` and restores 0.
+ */
+export async function cancelLocalOrder(
+  db: D1Database,
+  orderId: number,
+): Promise<{ cancelled: boolean; productPublicIds: string[] }> {
+  const { results: rows } = await db
+    .prepare(
+      `SELECT oi.product_id, oi.variant_id, SUM(oi.quantity) AS quantity,
+              p.public_id AS product_public_id
+         FROM order_items oi
+         LEFT JOIN products p ON p.id = oi.product_id
+        WHERE oi.order_id = ?
+        GROUP BY oi.product_id, oi.variant_id, p.public_id`,
+    )
+    .bind(orderId)
+    .all<{
+      product_id: number | null;
+      variant_id: number | null;
+      quantity: number;
+      product_public_id: string | null;
+    }>();
+
+  const guard =
+    "EXISTS (SELECT 1 FROM orders WHERE id = ? AND status = 'pending' AND payment_method IN ('cod', 'bank_transfer'))";
+  const restores = (rows ?? []).flatMap((row) => {
+    if (row.variant_id != null) {
+      return [
+        db
+          .prepare(`UPDATE product_variants SET stock = stock + ? WHERE id = ? AND ${guard}`)
+          .bind(row.quantity, row.variant_id, orderId),
+      ];
+    }
+    if (row.product_id != null) {
+      return [
+        db
+          .prepare(`UPDATE products SET stock = stock + ? WHERE id = ? AND ${guard}`)
+          .bind(row.quantity, row.product_id, orderId),
+      ];
+    }
+    return [];
+  });
+  const finish = db
+    .prepare(
+      `UPDATE orders SET status = 'cancelled'
+        WHERE id = ? AND status = 'pending' AND payment_method IN ('cod', 'bank_transfer')
+        RETURNING id`,
+    )
+    .bind(orderId);
+  const result = await db.batch<{ id?: number }>([...restores, finish]);
+  const cancelled = Boolean(result.at(-1)?.results[0]?.id);
+  return {
+    cancelled,
+    productPublicIds: cancelled
+      ? (rows ?? []).map((row) => row.product_public_id).filter((id): id is string => !!id)
+      : [],
+  };
+}
+
 export interface OrderItemWithImage extends OrderItem {
   image_key: string | null;
   /** The product's prefixed public ID; null when the product row is gone. */
@@ -483,6 +561,7 @@ export async function recordPaidOrder(
     o.taxCents ?? 0,
     o.currency,
     o.shippingAddress ? JSON.stringify(o.shippingAddress) : null,
+    o.status ?? 'paid',
     o.paymentMethod ?? null,
     // Stripe PaymentIntent. Refund webhooks identify the charge and its payment
     // but not the session, so this is what charge.refunded resolves an order by.
@@ -493,7 +572,7 @@ export async function recordPaidOrder(
     ? db
         .prepare(
           `INSERT INTO orders (provider_session_id, public_id, email, amount_total_cents, shipping_cents, shipping_label, shipping_weight_grams, delivery_method, discount_cents, tax_cents, currency, ship_address, status, payment_method, settlement_token, provider_payment_id)
-           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, NULL, ?
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?
             WHERE EXISTS (
               SELECT 1 FROM checkout_reservations
                WHERE public_id = ? AND status IN ${settlementStatuses}
@@ -505,7 +584,7 @@ export async function recordPaidOrder(
     : db
         .prepare(
           `INSERT INTO orders (provider_session_id, public_id, email, amount_total_cents, shipping_cents, shipping_label, shipping_weight_grams, delivery_method, discount_cents, tax_cents, currency, ship_address, status, payment_method, settlement_token, provider_payment_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, NULL, ?)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
            ON CONFLICT(provider_session_id) DO NOTHING
            RETURNING id`,
         )

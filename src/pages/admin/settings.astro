@@ -47,6 +47,7 @@ import { onDemandImageDeliveryAvailable } from '../../features/products/image';
 import { catalogIsOrphaned } from '../../features/navigation/db';
 import { CACHE_TAG } from '../../features/cache/tags';
 import { purgeCacheTags } from '../../features/cache/purge';
+import { localCommerce } from '../../local-commerce';
 
 const capabilities: RuntimeCapabilities = {
   vault: vaultReady(),
@@ -300,6 +301,11 @@ if (Astro.request.method === 'POST') {
   } else if (action === 'save_opennode') {
     await setSetting(env.DB, 'opennode_api_url', String(form.get('opennode_api_url') ?? '').trim() || null);
     await applySecrets(['opennode_api_key']);
+  } else if (action === 'save_telegram') {
+    const chatId = String(form.get('telegram_chat_id') ?? '').trim();
+    const threadId = String(form.get('telegram_thread_id') ?? '').trim();
+    await setSetting(env.DB, 'telegram_chat_id', chatId || null);
+    await setSetting(env.DB, 'telegram_thread_id', threadId || null);
   }
   // Admin saves are deliberately coarse and infrequent. Purge both public
   // dependency roots after the write rather than risk a newly added setting
@@ -505,15 +511,25 @@ const turnstileReady =
   turnstileConfigured(settings, capabilities) && turnstileSecretReady;
 
 // Jump sub-nav targets.
+// Telegram owner-alert side-channel. Bot token is a Worker secret (TELEGRAM_BOT_TOKEN);
+// chat_id + thread_id are D1 settings editable here.
+const telegram = {
+  chatId: settings.telegramChatId ?? '',
+  threadId: settings.telegramThreadId ?? '',
+  active: !!env.TELEGRAM_BOT_TOKEN && !!settings.telegramChatId,
+};
+
+// Jump sub-nav targets.
 const sections = [
   { id: 'general', label: 'General' },
   { id: 'images', label: 'Images' },
   { id: 'payments', label: 'Payments' },
   { id: 'email', label: 'Email' },
+  { id: 'telegram', label: 'Telegram' },
   { id: 'turnstile', label: 'Bot protection' },
   { id: 'search', label: 'Search' },
   { id: 'build-time', label: 'Build-time' },
-];
+].filter((section) => !localCommerce.enabled || section.id !== 'payments');
 ---
 
 <AdminLayout title="Settings" active="settings">
@@ -933,7 +949,7 @@ const sections = [
   </section>
 
   {/* ── Payments (keys + config grouped per method) ──────────────────────── */}
-  <section id="payments" class="mt-10 scroll-mt-16">
+  <section id="payments" class="mt-10 scroll-mt-16" hidden={localCommerce.enabled}>
     <h2 class="mb-2 text-lg font-bold">Payments</h2>
     <p class="mb-4 text-sm text-gray-500">
       Each method's config and keys are grouped together below. A method goes live once its key
@@ -1227,6 +1243,78 @@ const sections = [
         Send test
       </button>
       <span data-email-test-result class="text-xs font-medium"></span>
+    </form>
+  </section>
+
+  {/* ── Telegram notifications ─────────────────────────────────────────────── */}
+  <section id="telegram" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Telegram</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Instant order-alert messages sent to a Telegram group or topic when a new order arrives.
+      Fires alongside (or instead of) the email owner notification.
+      The bot token must be set as the <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">TELEGRAM_BOT_TOKEN</code> Worker secret via
+      <code class="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">wrangler secret put TELEGRAM_BOT_TOKEN</code>.
+    </p>
+
+    {telegram.active && (
+      <p class="mb-4 inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+        <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+        Active — bot token configured
+      </p>
+    )}
+    {!env.TELEGRAM_BOT_TOKEN && (
+      <p class="mb-4 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+        <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+        Bot token not set — set <code class="font-mono">TELEGRAM_BOT_TOKEN</code> Worker secret to activate
+      </p>
+    )}
+
+    <form method="post" data-section="telegram" class="mt-3 rounded-lg border border-line p-5">
+      <input type="hidden" name="_action" value="save_telegram" />
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Chat ID</span>
+          <input
+            type="text"
+            name="telegram_chat_id"
+            id="telegram_chat_id"
+            value={telegram.chatId}
+            placeholder="-1004416195653"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          />
+          <p class="mt-1 text-xs text-gray-400">
+            Supergroup ID (from <code class="font-mono">t.me/c/&lt;id&gt;</code> — prefix with <code class="font-mono">-100</code>).
+          </p>
+        </label>
+
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Thread / Topic ID <span class="font-normal normal-case">(optional)</span></span>
+          <input
+            type="text"
+            name="telegram_thread_id"
+            id="telegram_thread_id"
+            value={telegram.threadId}
+            placeholder="2"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand focus:outline-none"
+          />
+          <p class="mt-1 text-xs text-gray-400">
+            Leave blank to send to the group's main chat. Forum topic ID is the number after <code class="font-mono">/c/…/</code>.
+          </p>
+        </label>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <button
+          type="submit"
+          class="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper hover:opacity-80"
+        >
+          Save
+        </button>
+        {validationError && (
+          <span class="text-xs font-medium text-red-600">{validationError}</span>
+        )}
+      </div>
     </form>
   </section>
 

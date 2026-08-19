@@ -14,6 +14,9 @@ import {
   settleDemoCheckout,
   settleLightningOnLoad,
 } from '../../features/payments/checkout/settle';
+import { releaseInventoryReservation } from '../../features/orders/reservations';
+import { deleteGuestAccessIfUnsettled } from '../../features/orders/guestAccess';
+import { purgeStockProductCache } from '../../features/cache/purge';
 
 // Single "complete your payment" entry point for the self-rendered rails. The
 // URL carries the guest access token for new checkouts (resolved through the
@@ -64,11 +67,21 @@ const waitUntil = ctx ? ctx.waitUntil.bind(ctx) : undefined;
 
 let declined: string | null = null;
 if (isDemo && Astro.request.method === 'POST' && !payExpired) {
+  const submitted = await Astro.request.formData();
+  if (submitted.get('_action') === 'cancel') {
+    await releaseInventoryReservation(env.DB, orderPublicId, purgeStockProductCache);
+    await env.DB
+      .prepare("UPDATE pending_payments SET status = 'expired' WHERE public_id = ? AND status = 'pending'")
+      .bind(orderPublicId)
+      .run();
+    await deleteGuestAccessIfUnsettled(env.DB, orderPublicId);
+    return Astro.redirect('/cart', 303);
+  }
   // Middleware already loaded the settings overlay for this document — hand it
   // down so settlement doesn't re-read it (and the three keys it derives).
   const result = await settleDemoCheckout(
     pending,
-    await Astro.request.formData(),
+    submitted,
     Astro.url.origin,
     Astro.locals.settings,
     waitUntil,

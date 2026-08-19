@@ -5,8 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "dev:prod": "astro build && wrangler dev -c dist/server/wrangler.json --remote --port 4321",
     "build": "astro build",
     "preview": "wrangler dev -c dist/server/wrangler.json --persist-to .wrangler/state",
+    "preview:prod": "wrangler dev -c dist/server/wrangler.json --remote --port 4321",
     "deploy": "node --experimental-strip-types scripts/deploy.mjs",
     "deploy:ci": "node --experimental-strip-types scripts/deploy.mjs --skip-build",
     "check": "npm run theme:sync && astro check",
@@ -39,6 +41,7 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.7",
+    "@tanstack/table-core": "^9.1.2",
     "astro": "^7.1.6",
     "markdown-it": "^15.0.0",
     "stripe": "^22.4.0",

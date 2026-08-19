@@ -1,6 +1,7 @@
 ---
 import { getConfig } from '../config';
 import { paymentsInDemoMode } from '../features/payments';
+import { localCommerce } from '../local-commerce';
 import { shippingFor } from '../features/shipping/effective';
 import { env } from 'cloudflare:workers';
 import { countUnresolvedInventoryExceptions } from '../features/orders/db';
@@ -41,10 +42,10 @@ const pageTitle = title ? `${title} — ${storeName} admin` : `${storeName} admi
 // not just the shipping one — the merchant should not have to go looking to find
 // out that they cannot take orders. Resolution is already loaded for this request,
 // so this costs no query.
-const shippingIssue = shippingFor(Astro.locals.settings).issue;
+const shippingIssue = localCommerce.enabled ? null : shippingFor(Astro.locals.settings).issue;
 const inventoryExceptionCount = await countUnresolvedInventoryExceptions(env.DB);
 
-const nav: { key: Section; label: string; href: string }[] = [
+const nav = ([
   { key: 'dashboard', label: 'Dashboard', href: '/admin' },
   { key: 'products', label: 'Products', href: '/admin/products' },
   { key: 'orders', label: 'Orders', href: '/admin/orders' },
@@ -55,7 +56,9 @@ const nav: { key: Section; label: string; href: string }[] = [
   { key: 'shipping', label: 'Shipping', href: '/admin/shipping' },
   { key: 'media', label: 'Media', href: '/admin/media' },
   { key: 'settings', label: 'Settings', href: '/admin/settings' },
-];
+] satisfies { key: Section; label: string; href: string }[]).filter(
+  (item) => !localCommerce.enabled || item.key !== 'shipping',
+);
 // Label of the section we're on — shown in the collapsed mobile disclosure.
 const currentLabel = nav.find((n) => n.key === active)?.label ?? 'Menu';
 ---
@@ -156,7 +159,7 @@ const currentLabel = nav.find((n) => n.key === active)?.label ?? 'Menu';
           )
         }
         {
-          Astro.locals.settings && paymentsInDemoMode(Astro.locals.settings) && (
+          !localCommerce.enabled && Astro.locals.settings && paymentsInDemoMode(Astro.locals.settings) && (
             <div class="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <strong class="font-semibold">No real payment method configured.</strong> Only{' '}
               <strong>Demo checkout</strong> can take orders right now — they're recorded and tagged{' '}

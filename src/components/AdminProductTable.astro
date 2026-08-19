@@ -1,0 +1,577 @@
+---
+import { formatPrice } from '../config';
+import { productImageUrl } from '../features/products/image';
+
+export interface ProductItem {
+  id: number;
+  public_id: string | null;
+  name: string;
+  slug: string;
+  price_cents: number;
+  currency: string;
+  image_key: string | null;
+  stock: number;
+  active: number;
+  sold: number;
+  isLinkedNav?: boolean;
+}
+
+interface Props {
+  products: ProductItem[];
+  currency?: string;
+  baseUrl?: string;
+}
+
+const { products, baseUrl = '' } = Astro.props;
+
+// Precompute display data for initial SSR and client hydration
+const initialData = products.map((p) => ({
+  ...p,
+  imageUrl: productImageUrl(p.image_key, baseUrl),
+  formattedPrice: formatPrice(p.price_cents, p.currency),
+}));
+---
+
+<div id="tanstack-product-table-root" class="space-y-4">
+  <!-- Controls Bar (Live Search & Quick Filters) -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-xl border border-line shadow-2xs">
+    <div class="flex flex-1 flex-wrap items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="product-search-input"
+          placeholder="Search products by title, price, slug..."
+          class="w-full rounded-lg border border-line bg-paper/50 py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+      </div>
+
+      <!-- Quick Filter: Status -->
+      <select
+        id="status-filter-select"
+        class="rounded-lg border border-line bg-paper/50 px-2.5 py-1.5 text-xs font-medium text-muted focus:border-brand focus:bg-white focus:outline-none"
+      >
+        <option value="all">All visibility</option>
+        <option value="active">Active only</option>
+        <option value="inactive">Inactive only</option>
+      </select>
+
+      <!-- Quick Filter: Stock -->
+      <select
+        id="stock-filter-select"
+        class="rounded-lg border border-line bg-paper/50 px-2.5 py-1.5 text-xs font-medium text-muted focus:border-brand focus:bg-white focus:outline-none"
+      >
+        <option value="all">All stock</option>
+        <option value="instock">In stock</option>
+        <option value="lowstock">Low stock (≤ 2)</option>
+        <option value="outofstock">Out of stock</option>
+      </select>
+    </div>
+
+    <!-- Match counter -->
+    <div class="text-xs text-muted flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+      <span>Found</span>
+      <span id="product-count-badge" class="font-semibold text-ink">{products.length}</span>
+      <span>products</span>
+    </div>
+  </div>
+
+  <!-- Modern Table Container -->
+  <div class="overflow-hidden rounded-xl border border-line bg-white shadow-2xs">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm table-fixed min-w-[760px]" id="admin-tanstack-table">
+        <colgroup>
+          <col class="w-[32%]" />
+          <col class="w-[13%]" />
+          <col class="w-[11%]" />
+          <col class="w-[8%]" />
+          <col class="w-[16%]" />
+          <col class="w-[20%]" />
+        </colgroup>
+        <thead class="border-b border-line bg-paper/70 text-xs font-semibold uppercase tracking-wider text-muted select-none">
+          <tr>
+            <th class="py-3.5 px-4 cursor-pointer hover:text-brand transition-colors" data-sort="name">
+              <div class="flex items-center gap-1.5">
+                <span>Product</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="price">
+              <div class="flex items-center gap-1.5">
+                <span>Price</span>
+                <span class="sort-icon text-gray-400 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="stock">
+              <div class="flex items-center gap-1.5">
+                <span>Stock</span>
+                <span class="sort-icon text-gray-400 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="sold">
+              <div class="flex items-center gap-1.5">
+                <span>Sold</span>
+                <span class="sort-icon text-gray-400 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 text-center cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="active">
+              <div class="inline-flex items-center gap-1.5 justify-center">
+                <span>Status</span>
+                <span class="sort-icon text-gray-400 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-4 text-right font-semibold whitespace-nowrap">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="product-table-body" class="divide-y divide-line/70">
+          {
+            initialData.map((p) => (
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <!-- Product Column -->
+                <td class="py-3 px-4 max-w-0">
+                  <a
+                    href={`/admin/products/${p.public_id}/edit`}
+                    class="flex items-center gap-3 group-hover:text-brand min-w-0"
+                  >
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      class="h-10 w-10 rounded-lg object-cover border border-line bg-paper/50 shrink-0"
+                      loading="lazy"
+                    />
+                    <div class="min-w-0 flex-1">
+                      <span class="font-medium text-ink block truncate" title={p.name}>{p.name}</span>
+                      <span class="text-xs text-faint block truncate">/{p.slug}</span>
+                    </div>
+                  </a>
+                </td>
+
+                <!-- Price Column -->
+                <td class="py-3 px-3 font-medium text-ink tabular-nums whitespace-nowrap">
+                  {p.formattedPrice}
+                </td>
+
+                <!-- Stock Column -->
+                <td class="py-3 px-3 whitespace-nowrap">
+                  {p.stock === 0 && (
+                    <span class="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                      Out of stock
+                    </span>
+                  )}
+                  {p.stock > 0 && p.stock <= 2 && (
+                    <span class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                      <span class="tabular-nums font-semibold">{p.stock}</span> (Low)
+                    </span>
+                  )}
+                  {p.stock > 2 && (
+                    <span class="text-ink font-normal tabular-nums">{p.stock}</span>
+                  )}
+                </td>
+
+                <!-- Sold Column -->
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">
+                  {p.sold > 0 ? (
+                    <span class="text-ink font-medium">{p.sold}</span>
+                  ) : (
+                    <span class="text-gray-300">0</span>
+                  )}
+                </td>
+
+                <!-- Active / Status Badge Column -->
+                <td class="py-3 px-3 text-center whitespace-nowrap">
+                  {p.active ? (
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Active
+                    </span>
+                  ) : (
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                      <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span> Inactive
+                    </span>
+                  )}
+                </td>
+
+                <!-- Actions Column -->
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center justify-end gap-1.5 text-xs">
+                    <a
+                      href={`/products/${p.slug}`}
+                      target="_blank"
+                      rel="noopener"
+                      title="View on store"
+                      class="inline-flex items-center rounded-md p-1 text-muted hover:bg-paper hover:text-brand transition-colors"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <a
+                      href={`/admin/products/${p.public_id}/edit`}
+                      class="inline-flex items-center rounded-md border border-line bg-white px-2.5 py-1 font-medium text-muted hover:border-brand hover:text-brand transition-colors"
+                    >
+                      Edit
+                    </a>
+                    <form
+                      method="POST"
+                      action={`/api/admin/products/${p.public_id}`}
+                      class="inline-block"
+                      data-confirm={
+                        p.isLinkedNav
+                          ? 'This product is linked from your navigation. Deleting it hides that link on the storefront. Continue?'
+                          : 'Delete this product?'
+                      }
+                    >
+                      <input type="hidden" name="_action" value="delete" />
+                      <button
+                        type="submit"
+                        class="inline-flex items-center rounded-md border border-transparent px-2 py-1 font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="table-empty-state" class="hidden py-12 text-center text-muted">
+      <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+      </svg>
+      <p class="text-sm">No products found matching the criteria.</p>
+    </div>
+
+    <!-- Table Footer / Pagination Controls -->
+    <div class="flex items-center justify-between border-t border-line bg-paper/40 px-4 py-3 text-xs text-muted">
+      <div class="flex items-center gap-2">
+        <span>Rows per page:</span>
+        <select
+          id="page-size-select"
+          class="rounded-md border border-line bg-white px-2 py-1 text-xs text-ink focus:outline-none"
+        >
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span id="page-info-label" class="ml-2">Page 1</span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          id="btn-prev-page"
+          disabled
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Previous
+        </button>
+        <button
+          id="btn-next-page"
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hydration Data -->
+<script id="product-tanstack-data" type="application/json" is:inline set:html={JSON.stringify(initialData)} />
+
+<script>
+  import {
+    constructTable,
+    stockFeatures,
+    type SortingState,
+    type ColumnFiltersState,
+  } from '@tanstack/table-core';
+
+  interface ProductRow {
+    id: number;
+    public_id: string | null;
+    name: string;
+    slug: string;
+    price_cents: number;
+    currency: string;
+    image_key: string | null;
+    stock: number;
+    active: number;
+    sold: number;
+    imageUrl: string;
+    formattedPrice: string;
+    isLinkedNav?: boolean;
+  }
+
+  const rawDataElement = document.getElementById('product-tanstack-data');
+  if (rawDataElement) {
+    const rawProducts: ProductRow[] = JSON.parse(rawDataElement.textContent || '[]');
+
+    let sorting: SortingState = [];
+    let columnFilters: ColumnFiltersState = [];
+    let globalFilter = '';
+    let pagination = {
+      pageIndex: 0,
+      pageSize: 30,
+    };
+
+    const columns = [
+      {
+        accessorKey: 'name',
+        header: 'Product',
+      },
+      {
+        accessorKey: 'price_cents',
+        id: 'price',
+        header: 'Price',
+      },
+      {
+        accessorKey: 'stock',
+        header: 'Stock',
+        filterFn: (row: any, _columnId: string, filterValue: string) => {
+          const val = row.original.stock;
+          if (filterValue === 'instock') return val > 0;
+          if (filterValue === 'lowstock') return val > 0 && val <= 2;
+          if (filterValue === 'outofstock') return val === 0;
+          return true;
+        },
+      },
+      {
+        accessorKey: 'sold',
+        header: 'Sold',
+      },
+      {
+        accessorKey: 'active',
+        header: 'Status',
+        filterFn: (row: any, _columnId: string, filterValue: number) => {
+          return row.original.active === filterValue;
+        },
+      },
+    ];
+
+    // Initialize TanStack Table instance
+    const table = constructTable({
+      features: stockFeatures,
+      data: rawProducts,
+      columns: columns as any,
+      initialState: {
+        sorting,
+        columnFilters,
+        globalFilter,
+        pagination,
+      },
+      globalFilterFn: (row: any, _columnId: string, filterValue: unknown) => {
+        const query = String(filterValue || '').toLowerCase().trim();
+        if (!query) return true;
+        const name = String(row.original?.name || '').toLowerCase();
+        const slug = String(row.original?.slug || '').toLowerCase();
+        const price = String(row.original?.formattedPrice || '').toLowerCase();
+        return name.includes(query) || slug.includes(query) || price.includes(query);
+      },
+    });
+
+    const tbody = document.getElementById('product-table-body');
+    const emptyState = document.getElementById('table-empty-state');
+    const countBadge = document.getElementById('product-count-badge');
+    const pageInfoLabel = document.getElementById('page-info-label');
+    const btnPrev = document.getElementById('btn-prev-page') as HTMLButtonElement | null;
+    const btnNext = document.getElementById('btn-next-page') as HTMLButtonElement | null;
+    const pageSizeSelect = document.getElementById('page-size-select') as HTMLSelectElement | null;
+    const searchInput = document.getElementById('product-search-input') as HTMLInputElement | null;
+    const statusSelect = document.getElementById('status-filter-select') as HTMLSelectElement | null;
+    const stockSelect = document.getElementById('stock-filter-select') as HTMLSelectElement | null;
+
+    function render() {
+      if (!tbody) return;
+
+      const rows = table.getPaginatedRowModel().rows;
+      const totalFiltered = table.getFilteredRowModel().rows.length;
+
+      if (countBadge) {
+        countBadge.textContent = String(totalFiltered);
+      }
+
+      if (rows.length === 0) {
+        tbody.innerHTML = '';
+        emptyState?.classList.remove('hidden');
+      } else {
+        emptyState?.classList.add('hidden');
+        tbody.innerHTML = rows
+          .map((row: any) => {
+            const p = row.original;
+            const stockBadge =
+              p.stock === 0
+                ? `<span class="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">Out of stock</span>`
+                : p.stock <= 2
+                ? `<span class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20"><span class="tabular-nums font-semibold">${p.stock}</span> (Low)</span>`
+                : `<span class="text-ink font-normal tabular-nums">${p.stock}</span>`;
+
+            const statusBadge = p.active
+              ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Active</span>`
+              : `<span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20"><span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span> Inactive</span>`;
+
+            const soldDisplay =
+              p.sold > 0
+                ? `<span class="text-ink font-medium">${p.sold}</span>`
+                : `<span class="text-gray-300">0</span>`;
+
+            const confirmMsg = p.isLinkedNav
+              ? 'This product is linked from your navigation. Deleting it hides that link on the storefront. Continue?'
+              : 'Delete this product?';
+
+            return `
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <td class="py-3 px-4 max-w-0">
+                  <a href="/admin/products/${p.public_id}/edit" class="flex items-center gap-3 group-hover:text-brand min-w-0">
+                    <img src="${p.imageUrl}" alt="${p.name}" class="h-10 w-10 rounded-lg object-cover border border-line bg-paper/50 shrink-0" loading="lazy" />
+                    <div class="min-w-0 flex-1">
+                      <span class="font-medium text-ink block truncate" title="${p.name}">${p.name}</span>
+                      <span class="text-xs text-faint block truncate">/${p.slug}</span>
+                    </div>
+                  </a>
+                </td>
+                <td class="py-3 px-3 font-medium text-ink tabular-nums whitespace-nowrap">${p.formattedPrice}</td>
+                <td class="py-3 px-3 whitespace-nowrap">${stockBadge}</td>
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">${soldDisplay}</td>
+                <td class="py-3 px-3 text-center whitespace-nowrap">${statusBadge}</td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center justify-end gap-1.5 text-xs">
+                    <a href="/products/${p.slug}" target="_blank" rel="noopener" title="View on store" class="inline-flex items-center rounded-md p-1 text-muted hover:bg-paper hover:text-brand transition-colors">
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <a href="/admin/products/${p.public_id}/edit" class="inline-flex items-center rounded-md border border-line bg-white px-2.5 py-1 font-medium text-muted hover:border-brand hover:text-brand transition-colors">Edit</a>
+                    <form method="POST" action="/api/admin/products/${p.public_id}" class="inline-block" data-confirm="${confirmMsg}">
+                      <input type="hidden" name="_action" value="delete" />
+                      <button type="submit" class="inline-flex items-center rounded-md border border-transparent px-2 py-1 font-medium text-red-600 hover:bg-red-50 transition-colors">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join('');
+
+        // Wire delete confirmation on dynamically rendered forms
+        tbody.querySelectorAll('form[data-confirm]').forEach((form) => {
+          form.addEventListener('submit', (e) => {
+            const msg = form.getAttribute('data-confirm') || 'Confirm deletion?';
+            if (!confirm(msg)) {
+              e.preventDefault();
+            }
+          });
+        });
+      }
+
+      // Update header sort icons
+      document.querySelectorAll<HTMLElement>('th[data-sort]').forEach((th) => {
+        const sortKey = th.getAttribute('data-sort');
+        const icon = th.querySelector('.sort-icon');
+        const currentSort = sorting.find((s) => s.id === sortKey);
+        if (icon) {
+          if (!currentSort) {
+            icon.textContent = '↕';
+            icon.className = 'sort-icon text-gray-300 text-2xs';
+          } else if (currentSort.desc) {
+            icon.textContent = '↓';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          } else {
+            icon.textContent = '↑';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          }
+        }
+      });
+
+      // Update pagination UI
+      const pageIndex = (table as any).store?.state?.pagination?.pageIndex ?? 0;
+      const pageCount = table.getPageCount() || 1;
+      if (pageInfoLabel) {
+        pageInfoLabel.textContent = `Page ${pageIndex + 1} of ${pageCount}`;
+      }
+      if (btnPrev) btnPrev.disabled = !table.getCanPreviousPage();
+      if (btnNext) btnNext.disabled = !table.getCanNextPage();
+    }
+
+    // Subscribe to store updates
+    (table as any).store?.subscribe(() => {
+      render();
+    });
+
+    // Attach Header Sort Handlers
+    document.querySelectorAll<HTMLElement>('th[data-sort]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const colId = th.getAttribute('data-sort');
+        if (!colId) return;
+
+        const currentSort = sorting.find((s) => s.id === colId);
+        if (!currentSort) {
+          sorting = [{ id: colId, desc: false }];
+        } else if (!currentSort.desc) {
+          sorting = [{ id: colId, desc: true }];
+        } else {
+          sorting = [];
+        }
+
+        table.setSorting(sorting);
+      });
+    });
+
+    // Attach Search Handler with Debounce
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    searchInput?.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const val = (e.target as HTMLInputElement).value;
+        table.setGlobalFilter(val);
+      }, 150);
+    });
+
+    // Attach Filter Select Handlers
+    function applyCustomFilters() {
+      const statusVal = statusSelect?.value || 'all';
+      const stockVal = stockSelect?.value || 'all';
+
+      const nextFilters: ColumnFiltersState = [];
+
+      if (statusVal === 'active') {
+        nextFilters.push({ id: 'active', value: 1 });
+      } else if (statusVal === 'inactive') {
+        nextFilters.push({ id: 'active', value: 0 });
+      }
+
+      if (stockVal === 'instock') {
+        nextFilters.push({ id: 'stock', value: 'instock' });
+      } else if (stockVal === 'lowstock') {
+        nextFilters.push({ id: 'stock', value: 'lowstock' });
+      } else if (stockVal === 'outofstock') {
+        nextFilters.push({ id: 'stock', value: 'outofstock' });
+      }
+
+      table.setColumnFilters(nextFilters);
+    }
+
+    statusSelect?.addEventListener('change', applyCustomFilters);
+    stockSelect?.addEventListener('change', applyCustomFilters);
+
+    // Attach Pagination Handlers
+    btnPrev?.addEventListener('click', () => table.previousPage());
+    btnNext?.addEventListener('click', () => table.nextPage());
+    pageSizeSelect?.addEventListener('change', (e) => {
+      const newSize = Number((e.target as HTMLSelectElement).value);
+      table.setPageSize(newSize);
+    });
+
+    // Initial render
+    render();
+  }
+</script>
