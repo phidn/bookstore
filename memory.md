@@ -15,4 +15,5 @@
 - Tri thức & Hướng dẫn: `docs/wiki/INDEX.md`
 - Quyết định kiến trúc & Nghiệp vụ: `docs/adr/INDEX.md`
 - Issue Tracker: https://github.com/phidn/bookstore/issues
+- Project Board (Kanban): https://github.com/users/phidn/projects/1
 
