@@ -14,7 +14,11 @@ import type { ShippingConfig } from './features/shipping/calculator';
  *              default, and checkout.
  * - favicon:   replace public/favicon.svg and regenerate the favicon.ico fallback.
  */
+export type AppEnvironment = 'local' | 'staging' | 'demo' | 'production';
+
 export interface SiteConfig {
+  /** Current runtime environment. In staging/demo/local, image tags/watermarks are displayed. */
+  environment: AppEnvironment;
   storeName: string;
   currency: string;
   /**
@@ -186,7 +190,10 @@ function deepMerge<T>(base: T, override: DeepPartial<T>): T {
 
 /** Upstream defaults. Don't edit these per-store — override in `store.config.ts`. */
 function defaultConfig(): SiteConfig {
+  const globalProc = typeof globalThis !== 'undefined' && 'process' in globalThis ? (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process : undefined;
+  const envVal = (env.ENVIRONMENT ?? globalProc?.env?.ENVIRONMENT ?? '') as AppEnvironment;
   return {
+    environment: envVal || 'local',
     storeName: env.STORE_NAME ?? 'My Shop',
     currency: 'usd', // store-wide currency (ISO 4217, lowercase)
     timeZone: env.TIME_ZONE ?? 'UTC', // setup/admin settings can override this at runtime

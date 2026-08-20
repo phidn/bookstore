@@ -42,3 +42,12 @@ const { image, class: className = '', fade = false } = Astro.props;
   sizes={image.sizes}
   data-image-fade={fade && !image.priority ? '' : undefined}
 />
+{
+  image.envTag && (
+    <span class="pointer-events-none absolute right-2.5 top-2.5 z-10 select-none rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md ring-1 ring-amber-400/30 shadow-xs">
+      {image.envTag}
+    </span>
+  )
+}
+
+

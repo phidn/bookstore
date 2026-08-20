@@ -64,6 +64,8 @@ declare namespace Cloudflare {
     // Search backend selector (overrides config.search.provider): 'fts' | 'vector'.
     SEARCH_PROVIDER?: string;
     STORE_NAME: string;
+    /** Current runtime environment: 'local' | 'staging' | 'demo' | 'production'. */
+    ENVIRONMENT?: string;
     // Fallback IANA time zone; setup/admin settings store the runtime override.
     TIME_ZONE?: string;
     // Absolute base URL for product images (e.g. an R2 custom domain) so they

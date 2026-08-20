@@ -12,38 +12,27 @@
 
 @theme {
   /* Primary brand — solid buttons, primary actions, focus ring */
-  --color-brand: #111827;        /* swap for your brand color */
-  --color-brand-hover: #374151;  /* hover shade of the above */
+  --color-brand: #7d5a44;        /* Rich mocha chocolate */
+  --color-brand-hover: #634430;  /* Deep roast mocha hover */
 
-  /* Body text. Tokenized alongside --color-paper: a theme that changes the page
-     colour must be able to change the text colour with it, and a hardcoded
-     utility on <body> beats anything a theme declares in the base layer. */
-  --color-ink: #111827;
+  /* Body text */
+  --color-ink: #3d2e24;
 
   /* Accent — text links */
-  --color-accent: #2563eb;
+  --color-accent: #7d5a44;
 
-  /* Surfaces — warm paper background + hairline rules (editorial minimal) */
-  --color-paper: #faf8f4;
-  --color-line: #e7e2d9;
+  /* Surfaces — warm paper background + hairline rules (Mocha Mousse palette) */
+  --color-paper: #f5f2eb;
+  --color-line: #dcd2c4;
 
-  /* Raised panels: cards, form wells, the checkout summary. Distinct from
-     `paper` so a panel can sit *on* the page rather than dissolving into it. */
+  /* Raised panels: cards, form wells, the checkout summary */
   --color-surface: #ffffff;
 
-  /* Secondary and tertiary text. Two levels, not one — the storefront leans on
-     the distinction between a supporting line and an incidental one, and
-     collapsing them flattens every summary and product meta block.
+  /* Secondary and tertiary text */
+  --color-muted: #6e5d52;
+  --color-faint: #8c7b70;
 
-     Both clear 4.5:1 on `surface`. `faint` was gray-400 in a dozen places
-     before these became tokens, which is 2.6:1 on white — legible to us,
-     invisible to anyone else. */
-  --color-muted: #4b5563;
-  --color-faint: #6b7280;
-
-  /* Label colour on a `brand` fill. A token rather than a hardcoded white,
-     because a theme is free to pick a light brand — and then white fails
-     contrast on every primary button at once. */
+  /* Label colour on a `brand` fill */
   --color-on-brand: #ffffff;
 
   /* Typography — Lora (Vietnamese-capable literary serif) + system sans */

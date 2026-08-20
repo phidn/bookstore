@@ -73,8 +73,8 @@ export function AppSidebar({
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border bg-sidebar" {...props}>
-      <SidebarHeader className="border-b border-border/50 p-3">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar" {...props}>
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-3 py-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -86,7 +86,7 @@ export function AppSidebar({
               <img
                 src="/logo.png"
                 alt={storeName}
-                className="size-8 rounded-lg object-contain bg-paper border border-border/70 p-0.5 shrink-0"
+                className="size-8 rounded-lg object-contain bg-surface border border-sidebar-border/70 p-0.5 shrink-0"
               />
               <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden min-w-0 flex-1">
                 <span className="font-semibold text-sm truncate text-foreground">{storeName}</span>

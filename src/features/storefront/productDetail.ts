@@ -62,6 +62,8 @@ export interface ProductDetailOptions {
   /** Absolute origin for SEO URLs. */
   origin: string;
   pathname: string;
+  /** Optional environment indicator tag for non-production environments. */
+  envTag?: string | null;
 }
 
 function heroImage(
@@ -81,6 +83,7 @@ function heroImage(
     alt: product.name,
     // The product hero is the page's LCP candidate.
     priority: true,
+    ...(options.envTag ? { envTag: options.envTag } : {}),
   };
 }
 
@@ -223,6 +226,7 @@ export async function loadProductDetail(
           delivery: options.delivery,
           currency: options.currency,
           sizes: RELATED_CARD_SIZES,
+          envTag: options.envTag,
         }),
       ),
       backHref: catalogPath(options.settings?.homePage),

@@ -26,6 +26,8 @@ export interface StorefrontImageOptions {
    * image is what makes desync impossible.
    */
   priority?: boolean;
+  /** Optional environment indicator tag for non-production environments. */
+  envTag?: string | null;
 }
 
 /**
@@ -52,6 +54,7 @@ export function buildStorefrontImage(
     ...(sources.sizes ? { sizes: sources.sizes } : {}),
     alt,
     priority,
+    ...(options.envTag ? { envTag: options.envTag } : {}),
   };
 }
 

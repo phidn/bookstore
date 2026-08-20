@@ -52,15 +52,20 @@ const { page, offset, totalPages } = paginate(
 );
 const products = await productsInCategory(env.DB, category.id, PAGE_SIZE, offset, order);
 addCacheTags(Astro.response.headers, productCacheTags(products.map((product) => product.public_id)));
+const cfg = getConfig();
+const envName = cfg.environment;
+const envTag = envName === 'production' ? null : envName === 'staging' ? 'STAGING' : envName === 'demo' ? 'DEMO' : 'LOCAL';
+
 // Presentation models are built here, where the store's image settings are
 // known; only the first card is the LCP image.
 const cards = products.map((product, i) =>
   buildProductCard(product, {
-    baseUrl: getConfig().images.baseUrl,
-    currency: getConfig().currency,
+    baseUrl: cfg.images.baseUrl,
+    currency: cfg.currency,
     delivery: Astro.locals.settings?.imageDelivery,
     sizes: '(min-width: 1024px) 352px, calc(50vw - 36px)',
     priority: i === 0,
+    envTag,
   }),
 );
 const base = `/categories/${category.slug}`;

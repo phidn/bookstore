@@ -35,6 +35,8 @@ export interface StorefrontImage {
    * to silently regress LCP.
    */
   priority: boolean;
+  /** Environment indicator tag: 'STAGING' | 'DEMO' | 'LOCAL' | null. */
+  envTag?: string | null;
 }
 
 /** A product as a catalog/search/recommendation card. */

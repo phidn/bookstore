@@ -51,11 +51,16 @@ addCacheTags(
 );
 // Cards are built here, where the store's image settings are known; the
 // template receives resolved models. Only the first result is the LCP image.
+const cfg = getConfig();
+const envName = cfg.environment;
+const envTag = envName === 'production' ? null : envName === 'staging' ? 'STAGING' : envName === 'demo' ? 'DEMO' : 'LOCAL';
+
 const cardOptions = {
-  baseUrl: getConfig().images.baseUrl,
-  currency: getConfig().currency,
+  baseUrl: cfg.images.baseUrl,
+  currency: cfg.currency,
   delivery: Astro.locals.settings?.imageDelivery,
   sizes: '(min-width: 1024px) 352px, calc(50vw - 36px)',
+  envTag,
 };
 const cards = products.map((product, i) =>
   buildProductCard(product, { ...cardOptions, priority: i === 0 }),

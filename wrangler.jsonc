@@ -19,8 +19,7 @@
   //     PAID plan + onboarded sender domain). Resend (HTTP) works on the free plan
   //     and is configured entirely in Admin → Settings → Email.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "account_id": "b22e7099a9368ee7983a9ea38bca434d",
-  "name": "tieuvienhuuthu-store",
+  "name": "bookstore",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
@@ -53,21 +52,15 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "tieuvienhuuthu-store-db",
-      "database_id": "aa1c97c4-9833-4954-b938-2122d9871cc0",
+      "database_name": "bookstore-db",
+      "database_id": "placeholder-database-id",
       "migrations_dir": "migrations"
     }
   ],
   "r2_buckets": [
-    { "binding": "BUCKET", "bucket_name": "tieuvienhuuthu-store-images" },
+    { "binding": "BUCKET", "bucket_name": "bookstore-images" },
     // Private deliverables: never enable r2.dev or attach a custom domain.
-    { "binding": "FILES", "bucket_name": "tieuvienhuuthu-store-files" }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "SESSION",
-      "id": "3b02a5d585534efaa7d729c6fdca776f"
-    }
+    { "binding": "FILES", "bucket_name": "bookstore-files" }
   ],
   "vars": {
     "STORE_NAME": "My Shop",

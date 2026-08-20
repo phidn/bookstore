@@ -7,15 +7,20 @@ import { getConfig } from '../../config';
 import { publicOrigin } from '../../features/http/origin';
 import { addCacheTags, productCacheTags } from '../../features/cache/tags';
 
+const cfg = getConfig();
+const envName = cfg.environment;
+const envTag = envName === 'production' ? null : envName === 'staging' ? 'STAGING' : envName === 'demo' ? 'DEMO' : 'LOCAL';
+
 const loaded = await loadProductDetail(env.DB, {
   slug: Astro.params.slug,
   searchParams: Astro.url.searchParams,
   settings: Astro.locals.settings,
-  imageBaseUrl: getConfig().images.baseUrl,
+  imageBaseUrl: cfg.images.baseUrl,
   delivery: Astro.locals.settings?.imageDelivery,
-  currency: getConfig().currency,
+  currency: cfg.currency,
   origin: publicOrigin(Astro.url.origin, env.CANONICAL_ORIGIN),
   pathname: Astro.url.pathname,
+  envTag,
 });
 
 // Status, metadata, JSON-LD, and cache tagging stay with the route: none of

@@ -115,6 +115,8 @@ export interface CatalogPageOptions {
   currency: string;
   eyebrow: string;
   heading: string;
+  /** Optional environment indicator tag for non-production environments. */
+  envTag?: string | null;
 }
 
 export async function loadCatalogPage(
@@ -156,6 +158,7 @@ export async function loadCatalogPage(
         sizes: CARD_SIZES,
         // Only the first card is the page's likely LCP image.
         priority: index === 0,
+        envTag: options.envTag,
       }),
     ),
     sort: buildSortModel(options.base, sort, dir),

@@ -19,6 +19,8 @@ interface Props {
   fade?: boolean;
   /** Explicit mode for fragments that do not load the full settings overlay. */
   delivery?: ImageDelivery;
+  /** Show environment badge (STAGING / DEMO / LOCAL) on the image. Default: true. */
+  showTag?: boolean;
 }
 
 // Renders a product image, or the shared placeholder when there's none — so
@@ -33,13 +35,18 @@ const {
   usage = priority ? 'detail' : 'card',
   fade = false,
   delivery,
+  showTag = true,
 } = Astro.props;
+const config = getConfig();
 const sources = productImageSources(imageKey, {
-  baseUrl: getConfig().images.baseUrl,
+  baseUrl: config.images.baseUrl,
   delivery: delivery ?? Astro.locals.settings?.imageDelivery,
   usage,
   sizes,
 });
+const env = config.environment;
+const isProd = env === 'production';
+const envTag = env === 'staging' ? 'STAGING' : env === 'demo' ? 'DEMO' : env === 'local' ? 'LOCAL' : null;
 ---
 
 {/* width/height are a square (1:1) aspect hint to reserve space (no CLS) — the
@@ -64,3 +71,11 @@ const sources = productImageSources(imageKey, {
   sizes={sources.sizes}
   data-image-fade={fade && !priority ? '' : undefined}
 />
+{
+  showTag && !isProd && envTag && (
+    <span class="pointer-events-none absolute right-2.5 top-2.5 z-10 select-none rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300 backdrop-blur-md ring-1 ring-amber-400/30 shadow-xs">
+      {envTag}
+    </span>
+  )
+}
+

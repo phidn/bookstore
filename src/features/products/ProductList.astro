@@ -22,15 +22,20 @@ interface Props {
 
 const { eyebrow = 'Shop', heading = 'All products' } = Astro.props;
 
+const cfg = getConfig();
+const envName = cfg.environment;
+const envTag = envName === 'production' ? null : envName === 'staging' ? 'STAGING' : envName === 'demo' ? 'DEMO' : 'LOCAL';
+
 const model = await loadCatalogPage(env.DB, {
   base: Astro.url.pathname,
   searchParams: Astro.url.searchParams,
   responseHeaders: Astro.response.headers,
-  imageBaseUrl: getConfig().images.baseUrl,
-  currency: getConfig().currency,
+  imageBaseUrl: cfg.images.baseUrl,
+  currency: cfg.currency,
   delivery: Astro.locals.settings?.imageDelivery,
   eyebrow,
   heading,
+  envTag,
 });
 ---
 
