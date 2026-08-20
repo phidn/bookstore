@@ -130,7 +130,7 @@ const initialData = products.map((p) => ({
         </thead>
         <tbody id="product-table-body" class="divide-y divide-line/70">
           {
-            initialData.map((p) => (
+            initialData.slice(0, 30).map((p) => (
               <tr class="hover:bg-paper/40 transition-colors group">
                 <!-- Product Column -->
                 <td class="py-3 px-4 max-w-0">
@@ -243,7 +243,7 @@ const initialData = products.map((p) => ({
     </div>
 
     <!-- Empty State -->
-    <div id="table-empty-state" class="hidden py-12 text-center text-muted">
+    <div id="table-empty-state" class={initialData.length === 0 ? 'py-12 text-center text-muted' : 'hidden py-12 text-center text-muted'}>
       <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
       </svg>
@@ -263,7 +263,7 @@ const initialData = products.map((p) => ({
           <option value="50">50</option>
           <option value="100">100</option>
         </select>
-        <span id="page-info-label" class="ml-2">Page 1</span>
+        <span id="page-info-label" class="ml-2">Page 1 of {Math.ceil(products.length / 30) || 1}</span>
       </div>
 
       <div class="flex items-center gap-1.5">
@@ -276,6 +276,7 @@ const initialData = products.map((p) => ({
         </button>
         <button
           id="btn-next-page"
+          disabled={products.length <= 30}
           class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
         >
           Next
@@ -291,10 +292,15 @@ const initialData = products.map((p) => ({
 <script>
   import {
     constructTable,
+    tableFeatures,
     stockFeatures,
+    createFilteredRowModel,
+    createSortedRowModel,
+    createPaginatedRowModel,
     type SortingState,
     type ColumnFiltersState,
   } from '@tanstack/table-core';
+  import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings';
 
   interface ProductRow {
     id: number;
@@ -358,9 +364,15 @@ const initialData = products.map((p) => ({
       },
     ];
 
-    // Initialize TanStack Table instance
+    // Initialize TanStack Table instance (v9 API)
     const table = constructTable({
-      features: stockFeatures,
+      features: tableFeatures({
+        ...stockFeatures,
+        coreReactivityFeature: storeReactivityBindings(),
+        filteredRowModel: createFilteredRowModel(),
+        sortedRowModel: createSortedRowModel(),
+        paginatedRowModel: createPaginatedRowModel(),
+      }),
       data: rawProducts,
       columns: columns as any,
       initialState: {
@@ -493,7 +505,7 @@ const initialData = products.map((p) => ({
       });
 
       // Update pagination UI
-      const pageIndex = (table as any).store?.state?.pagination?.pageIndex ?? 0;
+      const pageIndex = (table as any).atoms?.pagination?.get()?.pageIndex ?? 0;
       const pageCount = table.getPageCount() || 1;
       if (pageInfoLabel) {
         pageInfoLabel.textContent = `Page ${pageIndex + 1} of ${pageCount}`;

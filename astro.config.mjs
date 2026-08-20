@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { resolveTheme } from './scripts/themes.mjs';
 import { themeCssPath, writeThemeArtifacts } from './scripts/theme-css.mjs';
 
+import react from '@astrojs/react';
+
 // SSR on Cloudflare Workers. platformProxy lets `astro dev` read bindings
 // (D1, R2, vars) from wrangler.jsonc locally.
 // Tailwind v4 is wired via its Vite plugin (the old @astrojs/tailwind
@@ -48,7 +50,7 @@ const themeStamp = {
 
 export default defineConfig({
   output: 'server',
-  integrations: [themeStamp],
+  integrations: [themeStamp, react()],
   // Replaced by the equivalent middleware guard so the bearer-capability
   // /pay/otk_… form can support clients that omit Origin without weakening
   // cookie-authenticated Admin/account forms.

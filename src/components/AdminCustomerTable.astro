@@ -1,0 +1,406 @@
+---
+import { formatPrice, formatDate } from '../config';
+import type { CustomerSummary } from '../features/customers/db';
+
+interface Props {
+  customers: CustomerSummary[];
+  timeZone?: string;
+}
+
+const { customers, timeZone } = Astro.props;
+
+// Precompute display data for SSR and client hydration
+const initialData = customers.map((c) => ({
+  ...c,
+  formattedLifetime: formatPrice(c.lifetime_cents),
+  formattedLastOrder: c.last_order ? formatDate(c.last_order, { dateStyle: 'medium' }, timeZone) : '—',
+  encodedEmail: encodeURIComponent(c.email),
+}));
+---
+
+<div id="tanstack-customer-table-root" class="space-y-4">
+  <!-- Controls Bar (Live Search & Quick Filters) -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-xl border border-line shadow-2xs">
+    <div class="flex flex-1 flex-wrap items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="customer-search-input"
+          placeholder="Search customers by email..."
+          class="w-full rounded-lg border border-line bg-paper/50 py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+      </div>
+
+      <!-- Quick Filter: Orders Count -->
+      <select
+        id="customer-orders-filter"
+        class="rounded-lg border border-line bg-paper/50 px-2.5 py-1.5 text-xs font-medium text-muted focus:border-brand focus:bg-white focus:outline-none"
+      >
+        <option value="all">All customers</option>
+        <option value="repeat">Repeat buyers (≥ 2 orders)</option>
+        <option value="single">Single order (1 order)</option>
+      </select>
+    </div>
+
+    <!-- Match counter -->
+    <div class="text-xs text-muted flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+      <span>Found</span>
+      <span id="customer-count-badge" class="font-semibold text-ink">{customers.length}</span>
+      <span>customers</span>
+    </div>
+  </div>
+
+  <!-- Modern Table Container -->
+  <div class="overflow-hidden rounded-xl border border-line bg-white shadow-2xs">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm table-fixed min-w-[640px]" id="admin-tanstack-customer-table">
+        <colgroup>
+          <col class="w-[40%]" />
+          <col class="w-[15%]" />
+          <col class="w-[20%]" />
+          <col class="w-[25%]" />
+        </colgroup>
+        <thead class="border-b border-line bg-paper/70 text-xs font-semibold uppercase tracking-wider text-muted select-none">
+          <tr>
+            <th class="py-3.5 px-4 cursor-pointer hover:text-brand transition-colors" data-sort="email">
+              <div class="flex items-center gap-1.5">
+                <span>Customer</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="orders">
+              <div class="flex items-center gap-1.5">
+                <span>Orders</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="lifetime_cents">
+              <div class="flex items-center gap-1.5">
+                <span>Lifetime value</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-4 text-right cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="last_order">
+              <div class="inline-flex items-center gap-1.5 justify-end w-full">
+                <span>Last order</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="customer-table-body" class="divide-y divide-line/70">
+          {
+            initialData.slice(0, 30).map((c) => (
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <!-- Customer / Email -->
+                <td class="py-3 px-4 max-w-0">
+                  <a
+                    href={`/admin/customers/${c.encodedEmail}`}
+                    title={c.email}
+                    class="font-medium text-ink group-hover:text-brand block truncate"
+                  >
+                    {c.email}
+                  </a>
+                </td>
+
+                <!-- Orders -->
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-md bg-paper px-2 py-0.5 text-xs font-semibold text-ink border border-line">
+                    {c.orders}
+                  </span>
+                </td>
+
+                <!-- Lifetime Value -->
+                <td class="py-3 px-3 font-medium text-ink tabular-nums whitespace-nowrap">
+                  {c.formattedLifetime}
+                </td>
+
+                <!-- Last Order -->
+                <td class="py-3 px-4 text-right text-muted whitespace-nowrap text-xs">
+                  {c.formattedLastOrder}
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="customer-table-empty-state" class={initialData.length === 0 ? 'py-12 text-center text-muted' : 'hidden py-12 text-center text-muted'}>
+      <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <p class="text-sm">No customers found matching the criteria.</p>
+    </div>
+
+    <!-- Table Footer / Pagination Controls -->
+    <div class="flex items-center justify-between border-t border-line bg-paper/40 px-4 py-3 text-xs text-muted">
+      <div class="flex items-center gap-2">
+        <span>Rows per page:</span>
+        <select
+          id="customer-page-size-select"
+          class="rounded-md border border-line bg-white px-2 py-1 text-xs text-ink focus:outline-none"
+        >
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span id="customer-page-info-label" class="ml-2">Page 1 of {Math.ceil(customers.length / 30) || 1}</span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          id="customer-btn-prev-page"
+          disabled
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Previous
+        </button>
+        <button
+          id="customer-btn-next-page"
+          disabled={customers.length <= 30}
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hydration Data -->
+<script id="customer-tanstack-data" type="application/json" is:inline set:html={JSON.stringify(initialData)} />
+
+<script>
+  import {
+    constructTable,
+    tableFeatures,
+    stockFeatures,
+    createFilteredRowModel,
+    createSortedRowModel,
+    createPaginatedRowModel,
+    type SortingState,
+    type ColumnFiltersState,
+  } from '@tanstack/table-core';
+  import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings';
+
+  interface CustomerRow {
+    email: string;
+    orders: number;
+    lifetime_cents: number;
+    last_order: string;
+    formattedLifetime: string;
+    formattedLastOrder: string;
+    encodedEmail: string;
+  }
+
+  const rawDataElement = document.getElementById('customer-tanstack-data');
+  if (rawDataElement) {
+    const rawCustomers: CustomerRow[] = JSON.parse(rawDataElement.textContent || '[]');
+
+    let sorting: SortingState = [{ id: 'lifetime_cents', desc: true }];
+    let columnFilters: ColumnFiltersState = [];
+    let globalFilter = '';
+    let pagination = {
+      pageIndex: 0,
+      pageSize: 30,
+    };
+
+    const columns = [
+      {
+        accessorKey: 'email',
+        header: 'Customer',
+      },
+      {
+        accessorKey: 'orders',
+        header: 'Orders',
+        filterFn: (row: any, _columnId: string, filterValue: string) => {
+          const count = row.original.orders;
+          if (filterValue === 'repeat') return count >= 2;
+          if (filterValue === 'single') return count === 1;
+          return true;
+        },
+      },
+      {
+        accessorKey: 'lifetime_cents',
+        header: 'Lifetime value',
+      },
+      {
+        accessorKey: 'last_order',
+        header: 'Last order',
+      },
+    ];
+
+    // Initialize TanStack Table instance (v9 API)
+    const table = constructTable({
+      features: tableFeatures({
+        ...stockFeatures,
+        coreReactivityFeature: storeReactivityBindings(),
+        filteredRowModel: createFilteredRowModel(),
+        sortedRowModel: createSortedRowModel(),
+        paginatedRowModel: createPaginatedRowModel(),
+      }),
+      data: rawCustomers,
+      columns: columns as any,
+      initialState: {
+        sorting,
+        columnFilters,
+        globalFilter,
+        pagination,
+      },
+      globalFilterFn: (row: any, _columnId: string, filterValue: unknown) => {
+        const query = String(filterValue || '').toLowerCase().trim();
+        if (!query) return true;
+        const email = String(row.original?.email || '').toLowerCase();
+        const lifetime = String(row.original?.formattedLifetime || '').toLowerCase();
+        const orders = String(row.original?.orders || '');
+        const lastOrder = String(row.original?.formattedLastOrder || '').toLowerCase();
+        return email.includes(query) || lifetime.includes(query) || orders.includes(query) || lastOrder.includes(query);
+      },
+    });
+
+    const tbody = document.getElementById('customer-table-body');
+    const emptyState = document.getElementById('customer-table-empty-state');
+    const countBadge = document.getElementById('customer-count-badge');
+    const pageInfoLabel = document.getElementById('customer-page-info-label');
+    const btnPrev = document.getElementById('customer-btn-prev-page') as HTMLButtonElement | null;
+    const btnNext = document.getElementById('customer-btn-next-page') as HTMLButtonElement | null;
+    const pageSizeSelect = document.getElementById('customer-page-size-select') as HTMLSelectElement | null;
+    const searchInput = document.getElementById('customer-search-input') as HTMLInputElement | null;
+    const ordersFilterSelect = document.getElementById('customer-orders-filter') as HTMLSelectElement | null;
+
+    function render() {
+      if (!tbody) return;
+
+      const rows = table.getPaginatedRowModel().rows;
+      const totalFiltered = table.getFilteredRowModel().rows.length;
+
+      if (countBadge) {
+        countBadge.textContent = String(totalFiltered);
+      }
+
+      if (rows.length === 0) {
+        tbody.innerHTML = '';
+        emptyState?.classList.remove('hidden');
+      } else {
+        emptyState?.classList.add('hidden');
+        tbody.innerHTML = rows
+          .map((row: any) => {
+            const c = row.original;
+            return `
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <td class="py-3 px-4 max-w-0">
+                  <a href="/admin/customers/${c.encodedEmail}" title="${c.email}" class="font-medium text-ink group-hover:text-brand block truncate">
+                    ${c.email}
+                  </a>
+                </td>
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-md bg-paper px-2 py-0.5 text-xs font-semibold text-ink border border-line">
+                    ${c.orders}
+                  </span>
+                </td>
+                <td class="py-3 px-3 font-medium text-ink tabular-nums whitespace-nowrap">
+                  ${c.formattedLifetime}
+                </td>
+                <td class="py-3 px-4 text-right text-muted whitespace-nowrap text-xs">
+                  ${c.formattedLastOrder}
+                </td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+
+      // Update header sort icons
+      document.querySelectorAll<HTMLElement>('#admin-tanstack-customer-table th[data-sort]').forEach((th) => {
+        const sortKey = th.getAttribute('data-sort');
+        const icon = th.querySelector('.sort-icon');
+        const currentSort = sorting.find((s) => s.id === sortKey);
+        if (icon) {
+          if (!currentSort) {
+            icon.textContent = '↕';
+            icon.className = 'sort-icon text-gray-300 text-2xs';
+          } else if (currentSort.desc) {
+            icon.textContent = '↓';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          } else {
+            icon.textContent = '↑';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          }
+        }
+      });
+
+      // Update pagination UI
+      const pageIndex = (table as any).atoms?.pagination?.get()?.pageIndex ?? 0;
+      const pageCount = table.getPageCount() || 1;
+      if (pageInfoLabel) {
+        pageInfoLabel.textContent = `Page ${pageIndex + 1} of ${pageCount}`;
+      }
+      if (btnPrev) btnPrev.disabled = !table.getCanPreviousPage();
+      if (btnNext) btnNext.disabled = !table.getCanNextPage();
+    }
+
+    // Subscribe to store updates
+    (table as any).store?.subscribe(() => {
+      render();
+    });
+
+    // Attach Header Sort Handlers
+    document.querySelectorAll<HTMLElement>('#admin-tanstack-customer-table th[data-sort]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const colId = th.getAttribute('data-sort');
+        if (!colId) return;
+
+        const currentSort = sorting.find((s) => s.id === colId);
+        if (!currentSort) {
+          sorting = [{ id: colId, desc: false }];
+        } else if (!currentSort.desc) {
+          sorting = [{ id: colId, desc: true }];
+        } else {
+          sorting = [];
+        }
+
+        table.setSorting(sorting);
+      });
+    });
+
+    // Attach Search Handler with Debounce
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    searchInput?.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const val = (e.target as HTMLInputElement).value;
+        table.setGlobalFilter(val);
+      }, 150);
+    });
+
+    // Attach Filter Select Handlers
+    ordersFilterSelect?.addEventListener('change', () => {
+      const val = ordersFilterSelect.value;
+      if (val === 'all') {
+        table.setColumnFilters([]);
+      } else {
+        table.setColumnFilters([{ id: 'orders', value: val }]);
+      }
+    });
+
+    // Attach Pagination Handlers
+    btnPrev?.addEventListener('click', () => table.previousPage());
+    btnNext?.addEventListener('click', () => table.nextPage());
+    pageSizeSelect?.addEventListener('change', (e) => {
+      const newSize = Number((e.target as HTMLSelectElement).value);
+      table.setPageSize(newSize);
+    });
+
+    // Initial render
+    render();
+  }
+</script>
