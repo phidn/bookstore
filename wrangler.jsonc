@@ -1,0 +1,116 @@
+{
+	// Committed default config. Read by the one-click "Deploy to Cloudflare" button
+	// (which provisions D1 + R2 and rewrites database_id) AND by local `astro dev`.
+	//
+	// FREE-PLAN DEFAULT: D1 + R2 only — both on the Cloudflare free plan. Optional
+	// integrations (Images, Workers AI + Vectorize for semantic search, Cloudflare
+	// Email) are commented below; uncomment + redeploy to enable. Every one degrades
+	// gracefully when its binding is absent, so the store runs without them.
+	//
+	// `main` points at a custom entrypoint that re-exports Astro's fetch handler
+	// and adds `scheduled` for the cron below; the adapter still builds the app.
+	// No `assets` here: @astrojs/cloudflare supplies that itself.
+	//
+	// Per-instance CLI deploys use scripts/provision-cf.sh, which renders an instance
+	// config from wrangler.template.jsonc (real ids) and restores this file after.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "minshop",
+	"main": "./src/worker.ts",
+	"compatibility_date": "2026-07-20",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// Recurring jobs. Everything minshop defers was previously driven by incoming
+	// traffic (the notification sweep rides on live settlements; expired inventory
+	// holds are released by the next shopper's reservation), so a quiet store
+	// retried nothing and kept sold-out-looking stock locked. Five minutes is well
+	// inside the reservation TTL and costs one invocation. Handler: src/worker.ts.
+	"triggers": { "crons": ["*/5 * * * *"] },
+	"observability": {
+		"enabled": true,
+		// Span-level attribution (D1 calls, subrequests, waitUntil work). Full
+		// sampling: post-cache invocation volume is a few thousand a day, and the
+		// tail spikes we chase are exactly the ones sampling would drop.
+		"traces": { "enabled": true, "head_sampling_rate": 1 }
+	},
+	// Safe default for fresh workers.dev deployments. A rendered instance may
+	// enable Workers Caching only after it declares CANONICAL_ORIGIN and disables
+	// alternate ingress hostnames. cross_version_cache stays off unless the
+	// deploy environment has the same CACHE_PURGE_SECRET as the Worker:
+	// scripts/deploy.mjs uses it to sign the mandatory post-deploy purge.
+	"cache": {
+		"enabled": false
+	},
+	// Native Workers rate limiting. Namespace ids are account-scoped; keys also
+	// include the hostname so multiple stores can safely share these namespaces.
+	"ratelimits": [
+		{
+			"name": "AUTH_RATE_LIMITER",
+			"namespace_id": "10001",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		},
+		{
+			"name": "CHECKOUT_RATE_LIMITER",
+			"namespace_id": "10002",
+			"simple": {
+				"limit": 20,
+				"period": 60
+			}
+		},
+		{
+			"name": "SEARCH_RATE_LIMITER",
+			"namespace_id": "10003",
+			"simple": {
+				"limit": 60,
+				"period": 60
+			}
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "minshop-db",
+			"migrations_dir": "migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "minshop-images"
+		},
+		{
+			"binding": "FILES",
+			// Private deliverables: never enable r2.dev or attach a custom domain.
+			"bucket_name": "minshop-files"
+		}
+	],
+	// Optional integrations — uncomment + redeploy to enable (see README → Search,
+	// Settings). Each is just a binding; the code checks for it and falls back.
+	//   "images": { "binding": "IMAGES" },
+	//   "ai": { "binding": "AI" },
+	//   "vectorize": [{ "binding": "VECTORIZE", "index_name": "minshop-products" }],
+	//   "send_email": [{ "name": "EMAIL" }],
+	//
+	// Serve product images from an R2 custom domain (bypasses the Worker /images
+	// route and unlocks the Admin image-delivery selector) — connect a public custom
+	// domain to the bucket, then set (README → Settings):
+	//   "vars": { "IMAGE_BASE_URL": "https://images.example.com" },
+	//
+	// Store name, time zone, and the search backend are all set
+	// at RUNTIME in the first-run setup wizard / Admin → Settings (stored in D1), so
+	// the one-click deploy doesn't prompt for them — free-form deploy fields would
+	// only invite a typo that a wizard field validates. Code defaults apply until the
+	// wizard runs: "My Shop" / "UTC" / FTS keyword search (see src/config.ts).
+	//
+	// Secrets (SECRETS_KEK, AUTH_SECRET, provider keys) are set with `wrangler secret
+	// put` / the admin dashboard — never here.
+	//
+	// To forge-proof the admin gate with Cloudflare Access (src/middleware.ts), add:
+	//   "vars": {
+	//     "CF_ACCESS_TEAM_DOMAIN": "https://<team>.cloudflareaccess.com",
+	//     "CF_ACCESS_AUD": "<your Access application's AUD tag>"
+	//   }
+}

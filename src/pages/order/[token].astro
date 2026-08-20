@@ -1,0 +1,149 @@
+---
+import { env } from 'cloudflare:workers';
+import Layout from '../../layouts/Layout.astro';
+import { formatPrice, getConfig } from '../../config';
+import { getOrderByPublicId, listOrderItems } from '../../features/orders/db';
+import { orderNumber } from '../../features/orders/number';
+import { isLegacyPublicId, publicIdToken } from '../../features/ids/publicId.ts';
+import { isAccessToken } from '../../features/ids/token.ts';
+import { resolveAccessToken } from '../../features/orders/guestAccess.ts';
+import { clearCart } from '../../features/cart/cart';
+import { catalogPath } from '../../features/settings/home';
+
+// Guest access: new orders are addressed ONLY by their otk_ access token
+// (resolved through the registry); legacy orders keep their pre-cutover
+// public-id links. A bare ord_ public ID never grants access — same not-found
+// as an unknown token.
+const { token } = Astro.params;
+let order = null;
+if (token && isAccessToken(token)) {
+  const access = await resolveAccessToken(env.DB, token);
+  order = access ? await getOrderByPublicId(env.DB, access.order_public_id) : null;
+} else if (token && isLegacyPublicId(token)) {
+  order = await getOrderByPublicId(env.DB, token);
+} else if (token) {
+  return new Response('Not found', { status: 404 });
+}
+
+// This page carries a capability URL: never cache it, never leak it in referrers.
+Astro.response.headers.set('cache-control', 'private, no-store');
+Astro.response.headers.set('referrer-policy', 'no-referrer');
+
+// The webhook creates the order asynchronously, so the customer can land here
+// before it exists. If found, it's confirmed — clear the cart and show it.
+// clearCart (not a raw delete) so the script-readable count cookie goes with it
+// and the header badge can't survive the purchase.
+if (order) clearCart(Astro.cookies);
+const items = order ? await listOrderItems(env.DB, order.id) : [];
+
+// Customer reference: the ord_ token portion for new orders; legacy orders keep
+// showing their previously communicated calculated number.
+const orderRef = order
+  ? (publicIdToken(order.public_id ?? '', 'order') ?? String(orderNumber(order.id, getConfig().orderNumber)))
+  : null;
+
+// Human label for the rail the order was paid on (NULL = legacy, hidden).
+const PAYMENT_LABELS: Record<string, string> = {
+  stripe: 'Card',
+  lightning: 'Lightning',
+  opennode: 'Bitcoin',
+  demo: 'Demo (no charge)',
+};
+const paymentLabel = order?.payment_method ? PAYMENT_LABELS[order.payment_method] ?? null : null;
+// The catalog is at / until the home page is pointed elsewhere.
+const shopHref = catalogPath(Astro.locals.settings?.homePage);
+---
+
+<Layout title={order ? 'Order confirmed' : 'Confirming your order'}>
+  {
+    order ? (
+      <Fragment>
+        <h1 class="mb-2 font-serif text-3xl tracking-tight sm:text-4xl">Thank you! Your order is confirmed.</h1>
+        <p class="mb-6 text-sm text-muted">
+          Order #{orderRef}
+          {order.email && <Fragment> · a receipt is on its way to {order.email}</Fragment>}
+        </p>
+
+        <div class="overflow-hidden rounded-lg border border-line bg-surface">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-surface text-muted">
+              <tr>
+                <th class="px-4 py-2 font-medium">Item</th>
+                <th class="px-4 py-2 font-medium">Qty</th>
+                <th class="px-4 py-2 font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it) => (
+                <tr class="border-t border-line">
+                  <td class="px-4 py-2">{it.name}</td>
+                  <td class="px-4 py-2">{it.quantity}</td>
+                  <td class="px-4 py-2">
+                    {formatPrice(it.price_cents * it.quantity, order.currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p class="mt-4 text-lg font-semibold">
+          Total: {formatPrice(order.amount_total_cents, order.currency)}
+        </p>
+        {items.some((item) => item.file_key) && isAccessToken(token) && (
+          <section class="mt-8 rounded-lg border border-line bg-surface p-5">
+            <h2 class="font-serif text-2xl">Downloads</h2>
+            <ul class="mt-3 space-y-3">
+              {items.filter((item) => item.file_key && item.public_id).map((item) => (
+                <li class="flex flex-wrap items-center justify-between gap-3">
+                  <span>
+                    <strong>{item.file_name ?? item.name}</strong>
+                    {item.file_mime && <small class="ml-2 text-muted">{item.file_mime}</small>}
+                    {item.file_size_bytes != null && (
+                      <small class="ml-2 text-muted">{Math.ceil(item.file_size_bytes / 1024)} KB</small>
+                    )}
+                  </span>
+                  {order.refunded_cents >= order.amount_total_cents ? (
+                    <span class="text-sm text-muted">Unavailable after refund</span>
+                  ) : (
+                    <a
+                      href={`/order/${token}/download/${item.public_id}`}
+                      class="rounded-md bg-brand px-4 py-2 text-sm font-medium text-on-brand hover:bg-brand-hover"
+                    >Download</a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {paymentLabel && (
+          <p class="mt-1 text-sm text-muted">Paid with {paymentLabel}</p>
+        )}
+        {/* Amounts only — the internal note is for the merchant, not the buyer. */}
+        {order.refunded_cents > 0 && (
+          <p class="mt-2 text-sm text-muted">
+            {order.refunded_cents >= order.amount_total_cents
+              ? `Refunded ${formatPrice(order.refunded_cents, order.currency)}.`
+              : `Refunded ${formatPrice(order.refunded_cents, order.currency)} — ${formatPrice(
+                  order.amount_total_cents - order.refunded_cents,
+                  order.currency,
+                )} still paid.`}
+          </p>
+        )}
+        <a href={shopHref} class="mt-6 inline-block text-accent hover:underline">
+          &larr; Continue shopping
+        </a>
+      </Fragment>
+    ) : (
+      <Fragment>
+        {/* Order not recorded yet — poll until the webhook lands (no JS). */}
+        <meta http-equiv="refresh" content="3" />
+        <h1 class="mb-2 font-serif text-3xl tracking-tight sm:text-4xl">Confirming your order…</h1>
+        <p class="text-muted">
+          Your payment went through and we're recording your order. This page
+          refreshes automatically — it usually takes just a few seconds.
+        </p>
+      </Fragment>
+    )
+  }
+</Layout>

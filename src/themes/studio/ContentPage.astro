@@ -1,0 +1,25 @@
+---
+import type { ContentPageModel } from '../../features/storefront/models';
+
+/**
+ * Studio — a printed page.
+ *
+ * The frame is deliberately plain: the prose tokens carry this design, and the
+ * ramp is visibly the theme's own (4rem display headings, a 42rem measure, open
+ * leading) rather than inherited from the default.
+ *
+ * `markdown-content` is the hook every prose style is scoped to, and
+ * `layoutStyle` carries the width and alignment the merchant chose in Admin.
+ * Both stay.
+ */
+interface Props {
+  model: ContentPageModel;
+}
+
+const { model } = Astro.props;
+---
+
+<article class="markdown-content py-16" data-page-layout={model.layout} style={model.layoutStyle}>
+  <h1>{model.title}</h1>
+  <Fragment set:html={model.html} />
+</article>

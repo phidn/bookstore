@@ -1,0 +1,116 @@
+---
+import { env } from 'cloudflare:workers';
+import Layout from '../../layouts/Layout.astro';
+import ProductDetail from '#theme/ProductDetail.astro';
+import { loadProductDetail } from '../../features/storefront/productDetail';
+import { getConfig } from '../../config';
+import { publicOrigin } from '../../features/http/origin';
+import { addCacheTags, productCacheTags } from '../../features/cache/tags';
+
+const loaded = await loadProductDetail(env.DB, {
+  slug: Astro.params.slug,
+  searchParams: Astro.url.searchParams,
+  settings: Astro.locals.settings,
+  imageBaseUrl: getConfig().images.baseUrl,
+  delivery: Astro.locals.settings?.imageDelivery,
+  currency: getConfig().currency,
+  origin: publicOrigin(Astro.url.origin, env.CANONICAL_ORIGIN),
+  pathname: Astro.url.pathname,
+});
+
+// Status, metadata, JSON-LD, and cache tagging stay with the route: none of
+// them is a presentation decision, and all of them are easy to break silently.
+if (loaded.status === 'not_found') {
+  return new Response('Not found', { status: 404 });
+}
+
+const { model, purchase, seo } = loaded;
+addCacheTags(Astro.response.headers, productCacheTags(loaded.cacheTagIds));
+if (loaded.backfillRelated) {
+  // After the response is sent, so the shopper never waits on it.
+  Astro.locals.cfContext?.waitUntil(loaded.backfillRelated());
+}
+---
+
+<Layout title={seo.title} description={seo.description ?? undefined} image={seo.imagePath}>
+  <ProductDetail model={model} purchase={purchase} />
+
+  <script is:inline type="application/ld+json" set:html={seo.jsonLd} />
+
+  {/* Live price + hero image: reflect the chosen variant + checked add-ons. No-JS
+      still works — the server computes the real price in cart/checkout, and the
+      gallery's primary image shows by default. */}
+  <script>
+    // @ts-nocheck -- plain-JS client script (annotations would ship to the browser)
+    const form = document.querySelector('[data-options-form]');
+    const out = document.querySelector('[data-price-display]');
+    const track = document.querySelector('[data-hero-track]');
+    if (form instanceof HTMLFormElement && out instanceof HTMLElement) {
+      const currency = (out.dataset.currency || 'usd').toUpperCase();
+      const base = Number(out.dataset.base || '0');
+      const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency });
+      const divisor = 10 ** (fmt.resolvedOptions().maximumFractionDigits ?? 2);
+
+      // Scroll the gallery carousel to the variant's linked image (if any). The
+      // track is position:relative, so each image's offsetLeft is measured from the
+      // track's content box — exactly the scrollLeft needed to bring it flush left.
+      // data-image-id carries the gallery anchor (pimg_ public ID), never a row id.
+      const showImage = (imageId) => {
+        if (!(track instanceof HTMLElement) || !imageId) return;
+        const img = document.getElementById(`pi-${imageId}`);
+        if (img instanceof HTMLElement && track.contains(img)) {
+          track.scrollLeft = img.offsetLeft;
+        }
+      };
+
+      const update = (scroll) => {
+        const v = form.querySelector('input[name="variant_id"]:checked');
+        let cents = v ? Number(v.getAttribute('data-price')) : base;
+        for (const e of form.querySelectorAll('input[name="extra"]:checked')) {
+          cents += Number(e.getAttribute('data-price')) || 0;
+        }
+        out.textContent = fmt.format(cents / divisor);
+        if (scroll && v) showImage(v.getAttribute('data-image-id') || '');
+      };
+      // Sync price + carousel to the default-selected variant on load, and on every
+      // change. Setting track.scrollLeft only moves the carousel, never the page.
+      form.addEventListener('change', () => update(true));
+      update(true);
+    }
+  </script>
+
+  <script>
+    // @ts-nocheck -- plain-JS client script (annotations would ship to the browser)
+    const btn = document.querySelector('[data-share]');
+    if (btn instanceof HTMLElement) {
+      const canShare = typeof navigator.share === 'function';
+      const canCopy = !!navigator.clipboard?.writeText;
+      if (canShare || canCopy) {
+        btn.classList.remove('hidden');
+        btn.classList.add('inline-flex');
+        const label = btn.querySelector('[data-share-label]');
+        btn.addEventListener('click', async () => {
+          const url = location.href;
+          const title = btn.dataset.shareTitle || document.title;
+          if (canShare) {
+            // Rejects when the user dismisses the share sheet — that's expected.
+            try {
+              await navigator.share({ title, url });
+            } catch {
+              /* user cancelled */
+            }
+            return;
+          }
+          await navigator.clipboard.writeText(url);
+          if (label) {
+            const prev = label.textContent;
+            label.textContent = 'Link copied';
+            setTimeout(() => {
+              label.textContent = prev;
+            }, 1500);
+          }
+        });
+      }
+    }
+  </script>
+</Layout>

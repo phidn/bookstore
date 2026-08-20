@@ -1,0 +1,124 @@
+name: Verify
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mcp/package-lock.json
+
+      - name: Install storefront dependencies
+        run: npm ci
+
+      - name: Install MCP dependencies
+        run: npm ci --prefix mcp
+
+      - name: Create isolated Wrangler configuration
+        run: |
+          sed \
+            -e 's/__NAME__/minshop-check/g' \
+            -e 's/__DB_NAME__/minshop-check-db/g' \
+            -e 's/__DB_ID__/00000000-0000-0000-0000-000000000000/g' \
+            -e 's/__BUCKET__/minshop-check-images/g' \
+            -e 's/__FILES_BUCKET__/minshop-check-files/g' \
+            wrangler.template.jsonc > wrangler.jsonc
+
+      - name: Run complete verification
+        run: npm run verify
+
+  # Which themes exist is a property of the TREE, not of this file: a generated
+  # store carries its merchant-owned theme plus whatever shipped themes it kept,
+  # and a hardcoded list here would silently stop covering them. Discovery
+  # asks the same resolver the build uses.
+  discover:
+    name: Discover themes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      themes: ${{ steps.discover.outputs.themes }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: List themes not covered by the main job
+        id: discover
+        run: |
+          themes=$(node --input-type=module -e "
+            import { discoverThemeIds, resolveConfiguredTheme } from './scripts/themes.mjs';
+            const configured = resolveConfiguredTheme().id;
+            console.log(JSON.stringify(discoverThemeIds().filter((id) => id !== configured)));
+          ")
+          echo "discovered: $themes"
+          echo "themes=$themes" >> "$GITHUB_OUTPUT"
+
+  # The main job verifies whichever theme theme.config.json names. The
+  # contract suite exists precisely to hold for ANY design — so run it against
+  # every other theme in the tree. Not the full `verify`: the parts this omits
+  # (integration, MCP, scaffold, Stripe country data) are set-independent and
+  # would only multiply the bill.
+  themes:
+    name: Verify theme (${{ matrix.theme }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: discover
+    if: needs.discover.outputs.themes != '[]'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: ${{ fromJSON(needs.discover.outputs.themes) }}
+
+    env:
+      THEME: ${{ matrix.theme }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install storefront dependencies
+        run: npm ci
+
+      - name: Create isolated Wrangler configuration
+        run: |
+          sed \
+            -e 's/__NAME__/minshop-check/g' \
+            -e 's/__DB_NAME__/minshop-check-db/g' \
+            -e 's/__DB_ID__/00000000-0000-0000-0000-000000000000/g' \
+            -e 's/__BUCKET__/minshop-check-images/g' \
+            -e 's/__FILES_BUCKET__/minshop-check-files/g' \
+            wrangler.template.jsonc > wrangler.jsonc
+
+      - name: Verify the theme builds and honours the contract
+        run: npm run verify:theme

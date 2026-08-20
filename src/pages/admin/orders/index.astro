@@ -1,0 +1,379 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { formatPrice, formatDate, getConfig } from '../../../config';
+import {
+  countOrders,
+  listOrders,
+  getOrder,
+  getOrderByPublicId,
+  findOrderPublicIdByReference,
+  listUnresolvedInventoryExceptions,
+} from '../../../features/orders/db';
+import { orderByClause } from '../../../features/orders/sort';
+import { orderReference } from '../../../features/orders/number';
+import { paginate, queryHref } from '../../../pagination';
+import Pagination from '../../../components/Pagination.astro';
+import FilterBar from '../../../components/FilterBar.astro';
+import {
+  parseOrderFilters,
+  orderFilterClause,
+  orderFilterParams,
+  hasOrderFilters,
+  ORDER_STATUS_OPTIONS,
+  ORDER_METHOD_OPTIONS,
+} from '../../../features/orders/filter';
+import { listUnmatchedRefundEvents } from '../../../features/refunds/db';
+import {
+  parseOrderOrLegacyPublicId,
+  parsePublicId,
+  truncatePublicId,
+  PUBLIC_ID_TOKEN_LENGTH,
+} from '../../../features/ids/publicId';
+
+// Order lookup: a bare 10-char token, a full ord_<token> (or preserved legacy
+// public ID), or a legacy calculated number via order_reference_aliases. The
+// forms are checked in that order, and a hit redirects straight to the order.
+const rawQuery = Astro.url.searchParams.get('q');
+let lookupError: string | null = null;
+if (rawQuery !== null) {
+  const query = rawQuery.trim().replace(/^#/, '');
+  if (query !== '') {
+    const bareToken = parsePublicId(
+      `ord_${query.toLowerCase()}`,
+      'order',
+    );
+    const candidates = [
+      parseOrderOrLegacyPublicId(query, 'order'),
+      query.length === PUBLIC_ID_TOKEN_LENGTH ? bareToken : null,
+      await findOrderPublicIdByReference(env.DB, query),
+    ].filter((c): c is string => c !== null);
+    for (const candidate of candidates) {
+      const found = await getOrderByPublicId(env.DB, candidate);
+      if (found) return Astro.redirect(`/admin/orders/${found.public_id}`, 302);
+    }
+    lookupError = `No order matches “${query}”.`;
+  }
+}
+
+const sort = Astro.url.searchParams.get('sort');
+const dir = Astro.url.searchParams.get('dir');
+const filters = parseOrderFilters(Astro.url.searchParams);
+// One clause, both queries — otherwise the pager counts rows the table filtered out.
+const filterClause = orderFilterClause(filters);
+const filtered = hasOrderFilters(filters);
+const filterQuery = orderFilterParams(filters);
+
+const PAGE_SIZE = 50;
+const matchCount = await countOrders(env.DB, filterClause);
+const { page, offset, totalPages } = paginate(Astro.url.searchParams, matchCount, PAGE_SIZE);
+const orders = await listOrders(
+  env.DB,
+  PAGE_SIZE,
+  orderByClause(sort, dir),
+  offset,
+  filterClause,
+);
+// Sort and pagination links carry the active filters, so paging or re-sorting a
+// filtered list doesn't silently drop back to everything.
+const hrefFor = (p: number) =>
+  queryHref('/admin/orders', { ...filterQuery, sort, dir, page: p > 1 ? p : undefined });
+const onCfg = getConfig().orderNumber;
+const timeZone = Astro.locals.settings?.timeZone ?? getConfig().timeZone;
+
+// Column header → sort by it, toggling direction (default desc on a new column).
+const sortHref = (col: string) =>
+  queryHref('/admin/orders', {
+    ...filterQuery,
+    sort: col,
+    dir: sort === col && dir === 'desc' ? 'asc' : 'desc',
+  });
+const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓') : '');
+
+// Refunds a provider reported that no order claims — real money that moved, so
+// they surface here rather than sitting silently in a table.
+const unmatched = await listUnmatchedRefundEvents(env.DB);
+const inventoryExceptions = await listUnresolvedInventoryExceptions(env.DB);
+// The conflicting order for each matched event, so the warning can link and
+// label it by public ID + reference (never the row id). Bounded by the queue.
+const conflictOrders = new Map(
+  await Promise.all(
+    unmatched
+      .filter((e) => e.order_id != null)
+      .map(async (e) => [e.order_id!, await getOrder(env.DB, e.order_id!)] as const),
+  ),
+);
+const listError = Astro.url.searchParams.get('error');
+---
+
+<AdminLayout title="Orders" active="orders">
+  {
+    inventoryExceptions.length > 0 && (
+      <section id="inventory-exceptions" class="mb-8 rounded-lg border border-red-300 bg-red-50 px-5 py-4">
+        <h2 class="text-sm font-medium text-red-900">{inventoryExceptions.length} inventory exception{inventoryExceptions.length === 1 ? '' : 's'} need attention</h2>
+        <p class="mt-1 text-xs text-red-800">These paid orders arrived after their stock holds ended. Open each order to reconcile the oversold quantity.</p>
+        <ul class="mt-3 space-y-2 text-sm text-red-900">
+          {inventoryExceptions.map((entry) => (
+            <li>
+              <a class="font-medium underline" href={`/admin/orders/${entry.order_public_id}`}>
+                Order #{orderReference(entry.order_public_id, entry.order_id, onCfg)}
+              </a>{' '}
+              — {entry.shortfall_qty} unit{entry.shortfall_qty === 1 ? '' : 's'} oversold
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+  {
+    listError && (
+      <p class="mb-6 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        {listError}
+      </p>
+    )
+  }
+  {
+    unmatched.length > 0 && (
+      <section class="mb-8 rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
+        <h2 class="text-sm font-medium text-amber-900">
+          {unmatched.length} refund{unmatched.length === 1 ? '' : 's'} need{unmatched.length === 1 ? 's' : ''} attention
+        </h2>
+        <p class="mt-1 text-xs text-amber-800">
+          Your payment provider reported these refunds but they could not be applied. Nothing was
+          counted against your revenue yet.
+        </p>
+        <ul class="mt-3 space-y-2">
+          {unmatched.map((e) => (
+            <li class="flex flex-wrap items-center gap-3 text-xs text-amber-900">
+              <span class="font-mono">{e.provider_payment_id ?? '—'}</span>
+              <span class="tabular-nums">
+                {formatPrice(e.cumulative_refunded_cents, e.currency ?? undefined)}
+              </span>
+              <span>{formatDate(e.created_at, undefined, timeZone)}</span>
+              {/* Two different problems wear the same badge otherwise. An
+                  uncorrelated event can still be matched, so it gets Retry. A
+                  conflicting one already found its order, so retrying would
+                  only reproduce the conflict — it needs a person. */}
+              {e.order_id && conflictOrders.get(e.order_id) ? (
+                <Fragment>
+                  <span>
+                    Conflicts with{' '}
+                    <a
+                      href={`/admin/orders/${conflictOrders.get(e.order_id)!.public_id}`}
+                      class="underline"
+                    >
+                      order #{orderReference(
+                        conflictOrders.get(e.order_id)!.public_id,
+                        e.order_id,
+                        onCfg,
+                      )}
+                    </a>
+                    {e.last_error ? ` — ${e.last_error.replace(/_/g, ' ')}` : ''}
+                  </span>
+                  <form method="POST" action="/api/admin/refunds">
+                    <input type="hidden" name="_action" value="dismiss_refund_event" />
+                    <input type="hidden" name="event_id" value={e.provider_event_id} />
+                    <button
+                      type="submit"
+                      class="rounded-md border border-amber-300 bg-white px-3 py-1 font-medium uppercase tracking-wider hover:bg-amber-100"
+                    >
+                      Dismiss
+                    </button>
+                  </form>
+                </Fragment>
+              ) : (
+                <Fragment>
+                  <span>No order records this payment</span>
+                  <form method="POST" action="/api/admin/refunds">
+                    <input type="hidden" name="_action" value="retry_refund_event" />
+                    <input type="hidden" name="event_id" value={e.provider_event_id} />
+                    <button
+                      type="submit"
+                      class="rounded-md border border-amber-300 bg-white px-3 py-1 font-medium uppercase tracking-wider hover:bg-amber-100"
+                    >
+                      Retry
+                    </button>
+                  </form>
+                </Fragment>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+  <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <h1 class="font-serif text-3xl tracking-tight">Orders</h1>
+    <div class="flex flex-wrap items-center gap-3">
+      {/* Lookup accepts the customer reference in any form it was communicated:
+          the bare 10-char token, the full ord_ ID, or a legacy calculated
+          number preserved in order_reference_aliases. */}
+      <form method="GET" action="/admin/orders" class="flex items-center gap-2">
+        <input
+          type="search"
+          name="q"
+          value={rawQuery ?? ''}
+          placeholder="Order # or ID"
+          aria-label="Find an order by number or ID"
+          class="w-44 rounded-md border border-line bg-paper px-3 py-2 text-sm focus:border-brand focus:outline-none"
+        />
+        <button
+          type="submit"
+          class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand"
+        >
+          Find
+        </button>
+      </form>
+      {/* Exports exactly what's on screen. Handing back the whole table right
+          after someone narrowed it is a quiet way to ship the wrong numbers. */}
+      <a
+        href={queryHref('/admin/orders/export.csv', filterQuery)}
+        class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand"
+      >
+        {filtered ? 'Export these' : 'Export CSV'}
+      </a>
+    </div>
+  </div>
+
+  {
+    lookupError && (
+      <p class="mb-6 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        {lookupError}
+      </p>
+    )
+  }
+
+  <FilterBar
+    action="/admin/orders"
+    active={filtered}
+    count={matchCount}
+    noun="order"
+    hidden={{ sort: sort ?? undefined, dir: dir ?? undefined }}
+    selects={[
+      {
+        name: 'status',
+        label: 'Payment',
+        anyLabel: 'All payments',
+        value: filters.status,
+        options: ORDER_STATUS_OPTIONS,
+      },
+      {
+        name: 'fulfillment',
+        label: 'Fulfillment',
+        anyLabel: 'Any fulfillment',
+        value: filters.fulfillment,
+        options: [
+          { value: 'unfulfilled', label: 'Unfulfilled' },
+          { value: 'fulfilled', label: 'Fulfilled' },
+        ],
+      },
+      {
+        name: 'method',
+        label: 'Method',
+        anyLabel: 'All methods',
+        value: filters.method,
+        options: ORDER_METHOD_OPTIONS,
+      },
+    ]}
+  />
+
+  <div class="sm:overflow-x-auto">
+    <table class="admin-table w-full text-left text-sm">
+    <thead>
+      <tr class="border-b border-line text-xs uppercase tracking-widest text-gray-400">
+        <th class="py-3 pr-4 font-normal">
+          <a href={sortHref('order')} class="hover:text-brand">Order #{arrow('order')}</a>
+        </th>
+        <th class="py-3 pr-4 font-normal">Public ID</th>
+        <th class="py-3 pr-4 font-normal">
+          <a href={sortHref('email')} class="hover:text-brand">Email{arrow('email')}</a>
+        </th>
+        <th class="py-3 pr-4 font-normal">
+          <a href={sortHref('total')} class="hover:text-brand">Total{arrow('total')}</a>
+        </th>
+        <th class="py-3 pr-4 font-normal">
+          <a href={sortHref('status')} class="hover:text-brand">Status{arrow('status')}</a>
+        </th>
+        <th class="py-3 pr-4 font-normal">
+          <a href={sortHref('fulfillment')} class="hover:text-brand">Fulfillment{arrow('fulfillment')}</a>
+        </th>
+        <th class="py-3 font-normal">
+          <a href={sortHref('when')} class="hover:text-brand">When{arrow('when')}</a>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        orders.map((o) => (
+          <tr class="border-b border-line">
+            <td data-label="Order #" class="py-3 pr-4">
+              <a href={`/admin/orders/${o.public_id}`} class="text-accent tabular-nums hover:underline">
+                #{o.id}
+              </a>
+            </td>
+            <td data-label="Public ID" class="py-3 pr-4 font-mono text-xs">
+              {/* Shortened to the width of a current-format ID. Legacy hex/UUID
+                  IDs are more than twice as long and would otherwise stretch
+                  the column for every row. The link and the title keep the full
+                  value, so it stays copyable. */}
+              <a
+                href={`/admin/orders/${o.public_id}`}
+                title={o.public_id ?? undefined}
+                class="text-accent hover:underline"
+              >
+                {o.public_id ? truncatePublicId(o.public_id, 'order') : ''}
+              </a>
+            </td>
+            <td data-label="Email" class="py-3 pr-4">
+              {/* A long address is one unbreakable token, so left alone it sets
+                  the table's width on its own and brings back the horizontal
+                  scrollbar. Capped at sm+ only — the mobile card layout wraps
+                  it fine and has the room. The title keeps it readable. */}
+              {o.email ? (
+                <a
+                  href={`/admin/customers/${encodeURIComponent(o.email)}`}
+                  title={o.email}
+                  class="text-accent hover:underline sm:block sm:max-w-[11rem] sm:truncate"
+                >
+                  {o.email}
+                </a>
+              ) : (
+                '—'
+              )}
+            </td>
+            <td data-label="Total" class="py-3 pr-4 tabular-nums">{formatPrice(o.amount_total_cents, o.currency)}</td>
+            <td data-label="Status" class="py-3 pr-4">
+              <span class="rounded-full bg-white px-2 py-0.5 text-xs uppercase tracking-wide text-gray-500 ring-1 ring-line">
+                {o.status}
+              </span>
+            </td>
+            <td data-label="Fulfillment" class="py-3 pr-4">
+              <span
+                class={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ring-1 ${
+                  o.fulfillment_status === 'fulfilled'
+                    ? 'bg-green-50 text-green-700 ring-green-200'
+                    : 'bg-white text-gray-500 ring-line'
+                }`}
+              >
+                {o.fulfillment_status === 'fulfilled' ? 'Fulfilled' : 'Unfulfilled'}
+              </span>
+            </td>
+            <td data-label="When" class="py-3 text-gray-500">{formatDate(o.created_at, undefined, timeZone)}</td>
+          </tr>
+        ))
+      }
+      {
+        orders.length === 0 && (
+          <tr>
+            <td colspan="7" class="py-8 text-center text-gray-400">
+              {filtered ? 'No orders match these filters.' : 'No orders yet.'}
+            </td>
+          </tr>
+        )
+      }
+    </tbody>
+    </table>
+  </div>
+
+  <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+</AdminLayout>

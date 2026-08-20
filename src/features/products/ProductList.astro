@@ -1,0 +1,37 @@
+---
+import { env } from 'cloudflare:workers';
+import Catalog from '#theme/Catalog.astro';
+import { loadCatalogPage } from '../storefront/catalog';
+import { getConfig } from '../../config';
+
+/**
+ * The catalog list. Mounted at `/` and at `/products` — the store needs a URL
+ * for its products even when `/` has been pointed at a page, and duplicating
+ * this between the two routes would be two things to keep in step.
+ *
+ * Now glue: the loader owns query parsing, D1, cache tags, and URL
+ * construction; the store-owned Catalog template owns how the result looks.
+ * Sort and pagination hrefs are built from the CURRENT path rather than a
+ * hardcoded '/', so the links stay on whichever route is rendering it.
+ */
+interface Props {
+  /** Shown above the title; the section label. */
+  eyebrow?: string;
+  heading?: string;
+}
+
+const { eyebrow = 'Shop', heading = 'All products' } = Astro.props;
+
+const model = await loadCatalogPage(env.DB, {
+  base: Astro.url.pathname,
+  searchParams: Astro.url.searchParams,
+  responseHeaders: Astro.response.headers,
+  imageBaseUrl: getConfig().images.baseUrl,
+  currency: getConfig().currency,
+  delivery: Astro.locals.settings?.imageDelivery,
+  eyebrow,
+  heading,
+});
+---
+
+<Catalog model={model} />

@@ -1,0 +1,1641 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import MediaPicker from '../../features/media/MediaPicker.astro';
+import { setLogoFromMedia } from '../../features/media/db';
+import { homeTargetIsValid } from '../../features/settings/home';
+import { listPublishedPageOptions, getPageByPublicId } from '../../features/pages/db';
+import {
+  listProducts,
+  getProductsByIds,
+  getProductByPublicId,
+} from '../../features/products/db';
+import { parsePublicId } from '../../features/ids/publicId';
+import { mediaUrl } from '../../features/media/url';
+import { getConfig, formatPrice } from '../../config';
+import {
+  isMethodAvailable,
+  isPaymentMethod,
+  type PaymentMethod,
+} from '../../features/payments';
+import {
+  getStoreSettings,
+  setSetting,
+  setPaymentMethodDisabled,
+  setFeatureEnabled,
+} from '../../features/settings/db';
+import {
+  getSecret,
+  setSecret,
+  vaultReady,
+  type SecretName,
+} from '../../features/secrets/store';
+import {
+  featureAvailability,
+  lightningConfigurationError,
+  semanticSearchAvailable,
+  turnstileConfigured,
+  type RuntimeCapabilities,
+} from '../../features/settings/availability';
+import { getEmailProvider } from '../../features/email';
+import { normalizeTimeZone, allTimeZones } from '../../features/settings/timeZone';
+import { WEIGHT_UNITS, isWeightUnit } from '../../features/shipping/weight';
+import { shippingFor } from '../../features/shipping/effective';
+import SecretField from '../../components/SecretField.astro';
+import MethodToggle from '../../components/MethodToggle.astro';
+import { onDemandImageDeliveryAvailable } from '../../features/products/image';
+import { catalogIsOrphaned } from '../../features/navigation/db';
+import { CACHE_TAG } from '../../features/cache/tags';
+import { purgeCacheTags } from '../../features/cache/purge';
+
+const capabilities: RuntimeCapabilities = {
+  vault: vaultReady(),
+  authSecret: !!env.AUTH_SECRET,
+  images: !!env.IMAGES,
+  emailBinding: !!env.EMAIL,
+  ai: !!env.AI,
+  vectorize: !!env.VECTORIZE,
+};
+
+// Runtime mutations (POST). On success set a one-time flash cookie and redirect to a
+// CLEAN url (no ?msg lingering) — the GET below reads + clears it (Post/Redirect/Get).
+let validationError = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = form.get('_action');
+  // Each section submits its keys as `secret:<name>` inputs (blank = keep) plus an
+  // optional `clear:<name>` checkbox (remove). Process them with the section's save.
+  const applySecrets = async (names: SecretName[]) => {
+    for (const n of names) {
+      try {
+        if (String(form.get(`clear:${n}`)) === '1') await setSecret(env.DB, n, null);
+        else {
+          const v = String(form.get(`secret:${n}`) ?? '').trim();
+          if (v) await setSecret(env.DB, n, v);
+        }
+      } catch {
+        // No SECRETS_KEK → can't store; ignore (the UI gates key inputs on the KEK).
+      }
+    }
+  };
+  if (action === 'toggle_payment') {
+    const method = String(form.get('method') ?? '');
+    // `disabled` carries the NEW state the click applies (1 = turn off, 0 = turn on).
+    const disabled = String(form.get('disabled')) === '1';
+    const current = await getStoreSettings(env.DB);
+    if (!isPaymentMethod(method)) {
+      validationError = 'Unknown payment method.';
+    } else if (!disabled && !isMethodAvailable(method, current, capabilities.vault)) {
+      validationError = 'Configure this payment method before enabling it.';
+    } else {
+      await setPaymentMethodDisabled(env.DB, method, disabled);
+    }
+  } else if (action === 'toggle_feature') {
+    const feature = String(form.get('feature') ?? '');
+    const on = String(form.get('enabled')) === '1'; // `enabled` carries the NEW state
+    if (feature === 'cart_enabled' || feature === 'buy_now_enabled') {
+      await setFeatureEnabled(env.DB, feature, on);
+    } else if (
+      feature === 'discounts_enabled' ||
+      feature === 'tax_enabled' ||
+      feature === 'accounts_enabled' ||
+      feature === 'image_optimize' ||
+      feature === 'shipping_enabled'
+    ) {
+      let prerequisiteError = '';
+      if (on && (feature === 'discounts_enabled' || feature === 'tax_enabled')) {
+        const stripeSecret = await getSecret(env.DB, 'stripe_secret_key');
+        const stripeWebhook = await getSecret(env.DB, 'stripe_webhook_secret');
+        if (!stripeSecret || !stripeWebhook) {
+          prerequisiteError = 'Configure Stripe before enabling this Stripe-only feature.';
+        }
+      } else if (on && feature === 'accounts_enabled') {
+        if (!env.AUTH_SECRET) {
+          prerequisiteError = 'Set AUTH_SECRET before enabling customer accounts.';
+        } else if (!(await getEmailProvider())) {
+          prerequisiteError = 'Enable and configure email before enabling customer accounts.';
+        }
+      } else if (on && feature === 'image_optimize' && !env.IMAGES) {
+        prerequisiteError = 'Add the IMAGES binding and redeploy before enabling image optimization.';
+      }
+      if (prerequisiteError) {
+        validationError = prerequisiteError;
+      } else {
+        // These default OFF, so store an explicit '1'/'0' (absent = inherit config).
+        await setSetting(env.DB, feature, on ? '1' : '0');
+      }
+    }
+  } else if (action === 'save_weight_unit') {
+    // Display/input preference only: stored weights stay in grams, so changing the
+    // unit never rewrites a single product row — forms simply re-render converted.
+    const unit = String(form.get('weight_unit') ?? '');
+    await setSetting(env.DB, 'weight_unit', isWeightUnit(unit) && unit !== 'g' ? unit : '');
+  } else if (action === 'save_store') {
+    // Empty → setSetting deletes the row → falls back to the STORE_NAME default.
+    await setSetting(env.DB, 'store_name', String(form.get('store_name') ?? '').trim());
+    const zone = normalizeTimeZone(String(form.get('time_zone') ?? ''));
+    if (zone) {
+      await setSetting(env.DB, 'time_zone', zone);
+    } else {
+      validationError = 'Enter a valid IANA time zone, such as UTC or America/New_York.';
+    }
+  } else if (action === 'save_logo') {
+    const key = String(form.get('logo_image_key') ?? '').trim();
+    if (!key) {
+      // Empty → setSetting deletes the row → the header falls back to text.
+      await setSetting(env.DB, 'logo_image_key', '');
+    } else if (!(await setLogoFromMedia(env.DB, key))) {
+      // One guarded statement, sourced from `media`: checking first and writing
+      // second leaves a window where the file is deleted between the two, which
+      // would persist a key that renders a broken logo on every page.
+      validationError = 'That image is no longer in the media library.';
+    }
+  } else if (action === 'save_home') {
+    // The selector submits public IDs (page:page_… / product:prod_…); resolve
+    // them to the stored integer form here at the boundary. The stored setting
+    // keeps its existing `page:<id>` / `product:<id>` shape — it never leaves
+    // the server.
+    const choice = String(form.get('home_page') ?? '').trim();
+    let stored: string | null = null;
+    if (choice === '') {
+      stored = '';
+    } else if (choice.startsWith('page:')) {
+      const pid = parsePublicId(choice.slice('page:'.length), 'page');
+      const page = pid ? await getPageByPublicId(env.DB, pid) : null;
+      if (page) stored = `page:${page.id}`;
+    } else if (choice.startsWith('product:')) {
+      const pid = parsePublicId(choice.slice('product:'.length), 'product');
+      const product = pid ? await getProductByPublicId(env.DB, pid) : null;
+      if (product) stored = `product:${product.id}`;
+    }
+    if (stored !== null && (await homeTargetIsValid(env.DB, stored))) {
+      // '' deletes the row, so the catalog list is the default by absence.
+      await setSetting(env.DB, 'home_page', stored);
+    } else {
+      // Draft pages and inactive products are not valid targets — the same rule
+      // the storefront resolves by, so the setting cannot point somewhere that
+      // would silently fall back.
+      validationError = 'Choose a published page or an active product.';
+    }
+  } else if (action === 'save_announcement') {
+    // The message doubles as the on/off switch: empty deletes the row (setSetting
+    // treats '' as a delete), so there's no enabled flag to drift out of sync.
+    const message = String(form.get('announcement') ?? '').trim().slice(0, 200);
+    const href = String(form.get('announcement_href') ?? '').trim();
+    // The href is rendered into an <a>, so only allow a same-site path or an
+    // http(s) URL — never a javascript:/data: scheme, even from an admin.
+    const safeHref =
+      !href ||
+      (href.startsWith('/') && !href.startsWith('//')) ||
+      /^https?:\/\//i.test(href);
+    if (!safeHref) {
+      validationError = 'The announcement link must be a path like /sale or an http(s) URL.';
+    } else {
+      await setSetting(env.DB, 'announcement', message);
+      await setSetting(env.DB, 'announcement_href', message ? href : '');
+    }
+  } else if (action === 'set_image_delivery') {
+    const delivery = String(form.get('image_delivery') ?? '');
+    if (delivery === 'cloudflare') {
+      if (!onDemandImageDeliveryAvailable(getConfig().images.baseUrl)) {
+        validationError =
+          'Connect an HTTPS R2 custom domain and set IMAGE_BASE_URL before enabling on-demand images.';
+      } else {
+        await setSetting(env.DB, 'image_delivery', 'cloudflare');
+      }
+    } else if (delivery === 'original') {
+      await setSetting(env.DB, 'image_delivery', null);
+    } else {
+      validationError = 'Choose a valid image delivery method.';
+    }
+  } else if (action === 'set_search') {
+    // Runtime search backend. 'vector' needs the AI + VECTORIZE bindings; the
+    // search dispatcher falls back to keyword (FTS5) at query time if they're absent.
+    const provider = String(form.get('provider') ?? '');
+    if (provider === 'vector' && !semanticSearchAvailable(capabilities)) {
+      validationError = 'Add the AI and VECTORIZE bindings before enabling semantic search.';
+    } else if (provider === 'fts' || provider === 'vector') {
+      await setSetting(env.DB, 'search_provider', provider);
+    }
+  } else if (action === 'save_email') {
+    // Whole Email section: config + the Resend key, in one save. Store only the
+    // non-default config values so the table stays tidy (absent = default).
+    const requestedEnabled = String(form.get('email_enabled')) === '1';
+    const ep = String(form.get('email_provider') ?? '');
+    const provider = ep === 'cloudflare' ? 'cloudflare' : 'resend';
+    await setSetting(env.DB, 'email_provider', provider === 'cloudflare' ? 'cloudflare' : null);
+    await setSetting(env.DB, 'email_from', String(form.get('email_from') ?? '').trim() || null);
+    await setSetting(env.DB, 'email_from_name', String(form.get('email_from_name') ?? '').trim() || null);
+    await setSetting(env.DB, 'email_notify_to', String(form.get('email_notify_to') ?? '').trim() || null);
+    await applySecrets(['resend_api_key']);
+    const ready =
+      provider === 'cloudflare'
+        ? !!env.EMAIL
+        : !!(await getSecret(env.DB, 'resend_api_key'));
+    await setSetting(env.DB, 'email_enabled', requestedEnabled && ready ? null : '0');
+    if (requestedEnabled && !ready) {
+      validationError =
+        provider === 'cloudflare'
+          ? 'Add the EMAIL binding and redeploy before enabling Cloudflare Email.'
+          : 'Add a Resend API key before enabling email.';
+    }
+  } else if (action === 'save_turnstile') {
+    const requestedEnabled = String(form.get('turnstile_enabled')) === '1';
+    const siteKey = String(form.get('turnstile_site_key') ?? '').trim();
+    await setSetting(env.DB, 'turnstile_site_key', siteKey || null);
+    await applySecrets(['turnstile_secret_key']);
+    const secret = await getSecret(env.DB, 'turnstile_secret_key');
+    const ready = !!siteKey && !!secret;
+    await setSetting(env.DB, 'turnstile_enabled', requestedEnabled && ready ? '1' : null);
+    if (requestedEnabled && !ready) {
+      validationError = 'Add both the Turnstile site key and secret before enabling bot protection.';
+    }
+  } else if (action === 'save_default') {
+    const prov = String(form.get('payment_provider') ?? '');
+    const current = await getStoreSettings(env.DB);
+    const disabled = new Set(current.disabledPaymentMethods);
+    if (
+      !isPaymentMethod(prov) ||
+      !isMethodAvailable(prov, current, capabilities.vault) ||
+      disabled.has(prov)
+    ) {
+      validationError = 'Choose an enabled, configured payment method as the default.';
+    } else {
+      await setSetting(
+        env.DB,
+        'payment_provider',
+        prov === 'stripe' ? null : prov,
+      );
+    }
+  } else if (action === 'save_stripe') {
+    await applySecrets(['stripe_secret_key', 'stripe_webhook_secret']);
+  } else if (action === 'save_lightning') {
+    const requestedBackend = String(form.get('lightning_backend') ?? '');
+    if (requestedBackend !== 'lnbits' && requestedBackend !== 'phoenixd') {
+      validationError = 'Choose a valid Lightning backend.';
+    } else {
+      const backend = requestedBackend;
+      const urlField = backend === 'lnbits' ? 'lnbits_url' : 'phoenixd_url';
+      const secretName: SecretName =
+        backend === 'lnbits' ? 'lnbits_api_key' : 'phoenixd_password';
+      const url = String(form.get(urlField) ?? '').trim();
+      const suppliedSecret = String(form.get(`secret:${secretName}`) ?? '').trim();
+      const clearSecret = form.get(`clear:${secretName}`) === '1';
+      const existingSecret = clearSecret ? null : await getSecret(env.DB, secretName);
+      validationError =
+        lightningConfigurationError(
+          backend,
+          url,
+          !clearSecret && (!!suppliedSecret || !!existingSecret),
+        ) ?? '';
+
+      if (!validationError) {
+        await setSetting(env.DB, 'lightning_backend', backend === 'lnbits' ? 'lnbits' : null);
+        await setSetting(env.DB, urlField, url);
+        await applySecrets([secretName]);
+      }
+    }
+  } else if (action === 'save_shippo') {
+    await applySecrets(['shippo_api_key']);
+  } else if (action === 'save_opennode') {
+    await setSetting(env.DB, 'opennode_api_url', String(form.get('opennode_api_url') ?? '').trim() || null);
+    await applySecrets(['opennode_api_key']);
+  }
+  // Admin saves are deliberately coarse and infrequent. Purge both public
+  // dependency roots after the write rather than risk a newly added setting
+  // silently missing its invalidation edge.
+  await purgeCacheTags([CACHE_TAG.shell, CACHE_TAG.catalog]);
+  // Background (JS) submit → no redirect; the client re-fetches + swaps the section.
+  if (Astro.request.headers.get('x-requested-with') === 'fetch') {
+    return validationError
+      ? new Response(validationError, { status: 400 })
+      : new Response(null, { status: 204 });
+  }
+  // Invalid timezone: render the form with the error and retain the saved zone.
+  if (!validationError) {
+    // No-JS path: Post/Redirect/Get with a one-time flash banner.
+    Astro.cookies.set('flash', 'Settings updated', {
+      path: '/admin/settings',
+      maxAge: 15,
+      httpOnly: true,
+      sameSite: 'lax',
+    });
+    return Astro.redirect('/admin/settings', 303);
+  }
+}
+
+const cfg = getConfig();
+const { currency } = cfg;
+
+// One-time flash (set above) → shown once, then cleared. Also accepts ?msg for
+// redirects from other endpoints (the reindex API); the inline script strips any
+// lingering ?msg from the URL after it's shown.
+const flash = Astro.cookies.get('flash')?.value ?? null;
+if (flash) Astro.cookies.delete('flash', { path: '/admin/settings' });
+const msg = validationError || flash || Astro.url.searchParams.get('msg');
+
+const settings = await getStoreSettings(env.DB);
+const disabledSet = new Set(settings.disabledPaymentMethods);
+// Store name is a runtime overlay (this field / the setup wizard) over STORE_NAME.
+const storeName = settings.storeName ?? cfg.storeName;
+const logoUrl = settings.logoImageKey ? mediaUrl(settings.logoImageKey, cfg.images.baseUrl) : null;
+// Options for the home-page selector. Only published pages and active products
+// are offered, matching what the storefront will actually resolve. The product
+// list is bounded — a selector is not a place to render a whole catalog.
+const HOME_PRODUCT_CHOICES = 100;
+const homePages = await listPublishedPageOptions(env.DB);
+const homeProducts = await listProducts(env.DB, HOME_PRODUCT_CHOICES, 0, 'name COLLATE NOCASE');
+const homeChoice = settings.homePage ?? '';
+// The list is bounded, so a store with more products than that could render a
+// selector with NO option matching the current choice. The browser would then
+// show the first option — "Product list (default)" — and saving the form would
+// silently clear a perfectly valid setting. Pull the chosen one in explicitly.
+const chosenProductId = homeChoice.startsWith('product:') ? Number(homeChoice.slice(8)) : null;
+if (chosenProductId && !homeProducts.some((p) => p.id === chosenProductId)) {
+  // getProductsByIds filters on active = 1. getProduct does not, and pulling an
+  // INACTIVE product back in would show it as the selected home page while the
+  // storefront had already fallen back — and saving it would fail validation,
+  // leaving a form that cannot be submitted without changing the answer.
+  const [chosen] = await getProductsByIds(env.DB, [chosenProductId]);
+  if (chosen) homeProducts.unshift(chosen);
+}
+// A stored choice with no matching option — deactivated product, unpublished or
+// deleted page. The select falls back to showing "Product list (default)", which
+// is what the storefront renders too, so say why rather than letting the setting
+// look like it vanished on its own.
+const homeChoiceMissing =
+  homeChoice !== '' &&
+  !homePages.some((page) => `page:${page.id}` === homeChoice) &&
+  !homeProducts.some((product) => `product:${product.id}` === homeChoice);
+// Pointing / at a page or product moves the catalog to /products, and the header
+// no longer surfaces it automatically — navigation is merchant-managed now. If no
+// menu links the catalog, the shop becomes unreachable from the storefront. Warn
+// at the point of the decision rather than silently editing a menu the merchant
+// curates; they may genuinely want it unlinked.
+const catalogOrphaned = await catalogIsOrphaned(env.DB, settings.homePage);
+const timeZone = settings.timeZone ?? cfg.timeZone;
+const weightUnit = settings.weightUnit;
+// One control, one source of truth: the old on/off toggle lived here and the zones
+// lived in store.config.ts, which could disagree. Now Shipping owns both.
+const effectiveShipping = shippingFor(settings).config;
+const announcement = settings.announcement ?? '';
+const announcementHref = settings.announcementHref ?? '';
+const timeZones = allTimeZones();
+
+// Search backend: runtime overlay (toggle below) over the build-time default.
+// Semantic search needs the AI + VECTORIZE bindings; without them the toggle is
+// disabled and search stays on keyword (FTS5).
+const searchProvider = settings.searchProvider ?? cfg.search.provider;
+const vectorBindingsReady = semanticSearchAvailable(capabilities);
+const onDemandImagesReady = onDemandImageDeliveryAvailable(cfg.images.baseUrl);
+// The cursor is the last processed product's prod_ public ID ('' = start) —
+// no numeric row id travels through admin URLs or form values.
+const reindexCursor = parsePublicId(Astro.url.searchParams.get('reindex_cursor'), 'product') ?? '';
+const reindexProcessedValue = Number(Astro.url.searchParams.get('reindex_processed'));
+const reindexProcessed =
+  Number.isInteger(reindexProcessedValue) && reindexProcessedValue > 0
+    ? reindexProcessedValue
+    : 0;
+
+// Storefront feature switches (runtime, default on).
+const baseFeatureRows: { key: string; label: string; desc: string; on: boolean }[] = [
+  {
+    key: 'cart_enabled',
+    label: 'Cart & checkout',
+    desc: 'Add to cart and checkout. Off makes the store a browse-only catalog.',
+    on: settings.cartEnabled,
+  },
+  {
+    key: 'buy_now_enabled',
+    label: 'Buy now',
+    desc: 'Express instant-checkout button on product pages — works even with the cart off.',
+    on: settings.buyNowEnabled,
+  },
+  {
+    key: 'discounts_enabled',
+    label: 'Discount codes',
+    desc: 'Show the promo-code field at checkout. Codes are created in the Stripe Dashboard.',
+    on: settings.discountsEnabled ?? cfg.discounts.enabled,
+  },
+  {
+    key: 'tax_enabled',
+    label: 'Automatic tax',
+    desc: 'Charge sales tax / VAT via Stripe Tax — activate Stripe Tax in the Dashboard first.',
+    on: settings.taxEnabled ?? cfg.tax.enabled,
+  },
+  {
+    key: 'accounts_enabled',
+    label: 'Customer accounts',
+    desc: 'Passwordless (magic-link) customer login. Needs AUTH_SECRET + email configured.',
+    on: settings.accountsEnabled ?? cfg.features.accounts,
+  },
+  {
+    key: 'image_optimize',
+    label: 'Optimize images on upload',
+    desc: 'WebP-downscale product images via Cloudflare Images. Needs the IMAGES binding.',
+    on: settings.imageOptimize ?? cfg.images.optimizeOnUpload,
+  },
+];
+const featureRows = baseFeatureRows.map((row) => ({
+  ...row,
+  ...featureAvailability(row.key, settings, capabilities),
+}));
+
+const paymentMethods: { m: PaymentMethod; label: string }[] = [
+  { m: 'stripe', label: 'Card (Stripe)' },
+  { m: 'lightning', label: 'Lightning' },
+  { m: 'opennode', label: 'Bitcoin (OpenNode)' },
+  { m: 'demo', label: 'Demo checkout' },
+];
+const pmRows = paymentMethods.map((r) => {
+  const installed = isMethodAvailable(r.m, settings, capabilities.vault);
+  return { ...r, installed, enabled: installed && !disabledSet.has(r.m) };
+});
+
+// Payment config (default rail + Lightning node) — D1 settings; the keys are in the
+// vault below.
+const payments = {
+  provider: settings.paymentProvider,
+  lightningBackend: settings.lightningBackend,
+  lnbitsUrl: settings.lnbitsUrl ?? '',
+  phoenixdUrl: settings.phoenixdUrl ?? '',
+  opennodeApiUrl: settings.opennodeApiUrl ?? '',
+};
+
+// Encrypted key vault (features/secrets). Keys are write-only — stored AES-GCM in
+// D1 under SECRETS_KEK, never echoed back. Needs a KEK; without it the vault is
+// dormant (the store runs demo-only).
+const vault = capabilities.vault;
+const inD1 = (name: string) => settings.configuredSecrets.includes(name);
+// Per-method toggle/installed state, keyed by method for the cards below.
+const pmMap = Object.fromEntries(pmRows.map((r) => [r.m, r])) as Record<
+  string,
+  (typeof pmRows)[number]
+>;
+
+// Email integration — config lives in D1 (overlaid on the build-time defaults), the
+// Resend API key in the vault. `from` defaults to the build-time config when blank.
+const email = {
+  enabled: settings.emailEnabled,
+  provider: settings.emailProvider,
+  from: settings.emailFrom ?? '',
+  fromName: settings.emailFromName ?? '',
+  fromPlaceholder: cfg.email.from,
+  notifyTo: settings.emailNotifyTo ?? '',
+  notifyPlaceholder: cfg.email.notifyTo || 'you@yourdomain.com',
+};
+const resendStoredInD1 = inD1('resend_api_key');
+const resendReady = !!(await getSecret(env.DB, 'resend_api_key'));
+// The Cloudflare `send_email` binding is present when declared in wrangler.jsonc.
+// Presence ≠ deliverable: sending still needs a Workers Paid plan + an onboarded
+// sender domain (that only fails at send time). Mirrors the Search section's
+// AI/Vectorize binding check.
+const emailBindingReady = !!env.EMAIL;
+const selectedEmailReady =
+  email.provider === 'cloudflare' ? emailBindingReady : resendReady;
+
+// Turnstile (bot protection) — enabled + sitekey in D1, secret in the vault.
+const turnstile = {
+  enabled: settings.turnstileEnabled,
+  siteKey: settings.turnstileSiteKey ?? '',
+};
+const turnstileSecretInD1 = inD1('turnstile_secret_key');
+const turnstileSecretReady = !!(await getSecret(env.DB, 'turnstile_secret_key'));
+const turnstileReady =
+  turnstileConfigured(settings, capabilities) && turnstileSecretReady;
+
+// Jump sub-nav targets.
+const sections = [
+  { id: 'general', label: 'General' },
+  { id: 'images', label: 'Images' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'email', label: 'Email' },
+  { id: 'turnstile', label: 'Bot protection' },
+  { id: 'search', label: 'Search' },
+  { id: 'build-time', label: 'Build-time' },
+];
+---
+
+<AdminLayout title="Settings" active="settings">
+  <h1 class="mb-4 font-serif text-3xl tracking-tight">Settings</h1>
+
+  {/* Sticky jump sub-nav — scales the single page without splitting into routes. */}
+  <nav
+    class="no-scrollbar sticky top-0 z-10 -mx-6 mb-6 flex gap-1 overflow-x-auto border-b border-line bg-paper/90 px-6 py-2 text-xs uppercase tracking-widest backdrop-blur sm:mx-0 sm:px-0"
+  >
+    {
+      sections.map((s) => (
+        <a href={`#${s.id}`} class="shrink-0 rounded px-3 py-1 text-gray-500 hover:text-brand">
+          {s.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  {
+    msg && (
+      <p
+        data-flash
+        class={`mb-6 rounded-md border px-3 py-2 text-sm ${
+          validationError
+            ? 'border-red-200 bg-red-50 text-red-700'
+            : 'border-green-200 bg-green-50 text-green-700'
+        }`}
+      >
+        {msg}
+      </p>
+    )
+  }
+
+  {/* ── General: store identity + storefront features (runtime) ───────────── */}
+  <section id="general" class="scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">General</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Store identity and storefront features — apply immediately, no redeploy.
+    </p>
+
+    <form method="POST" class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_store" />
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          Store name
+          <input
+            type="text"
+            name="store_name"
+            value={storeName}
+            class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          Store time zone
+          <input
+            type="text"
+            name="time_zone"
+            value={timeZone}
+            required
+            list="tz-list"
+            placeholder="Search e.g. America/New_York"
+            class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+          <datalist id="tz-list">
+            {timeZones.map((z) => <option value={z} />)}
+          </datalist>
+        </label>
+      </div>
+      <p class="mt-3 text-xs text-gray-400">
+        The time zone controls stored UTC date display. Use an IANA name such as
+        <code>UTC</code> or <code>America/New_York</code>.
+      </p>
+      <button
+        type="submit"
+        class="mt-4 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+      >
+        Save
+      </button>
+    </form>
+
+    <form method="POST" class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_logo" />
+      <p class="mb-3 text-xs uppercase tracking-widest text-gray-400">Logo</p>
+      <div class="flex flex-wrap items-center gap-4">
+        <div
+          class="flex h-14 w-40 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-2"
+        >
+          {
+            logoUrl ? (
+              <img src={logoUrl} alt="Current logo" class="max-h-10 max-w-full object-contain" />
+            ) : (
+              <span class="font-serif text-lg tracking-tight text-gray-500">{storeName}</span>
+            )
+          }
+        </div>
+        {/* Carries the chosen key; the picker writes it and submits. */}
+        <input type="hidden" name="logo_image_key" value={settings.logoImageKey ?? ''} data-logo-key />
+        <MediaPicker id="logo" label={settings.logoImageKey ? 'Replace logo' : 'Choose logo'} />
+        {
+          settings.logoImageKey && (
+            <button
+              type="submit"
+              data-logo-remove
+              class="rounded-md border border-gray-300 px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand"
+            >
+              Remove logo
+            </button>
+          )
+        }
+      </div>
+      <p class="mt-3 text-xs text-gray-400">
+        Replaces the store name in the header. Removing it restores the text name. Saving
+        purges affected storefront pages; a 10-minute TTL bounds a transient purge failure.
+      </p>
+    </form>
+
+    <form method="POST" class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_home" />
+      <p class="mb-3 text-xs uppercase tracking-widest text-gray-400">Home page</p>
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          <span class="sr-only">What / shows</span>
+          <select
+            name="home_page"
+            class="w-80 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          >
+            <option value="" selected={homeChoice === ''}>Product list (default)</option>
+            {
+              homePages.length > 0 && (
+                <optgroup label="Page">
+                  {homePages.map((p) => (
+                    <option value={`page:${p.public_id}`} selected={homeChoice === `page:${p.id}`}>
+                      {p.title}
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            }
+            {
+              homeProducts.length > 0 && (
+                <optgroup label="Product">
+                  {homeProducts.map((p) => (
+                    <option value={`product:${p.public_id}`} selected={homeChoice === `product:${p.id}`}>
+                      {p.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            }
+          </select>
+        </label>
+      </div>
+      {
+        homeChoiceMissing && (
+          <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            The page or product this was set to is no longer published or active, so the home
+            page is showing the product list. Pick a new one to update the setting.
+          </p>
+        )
+      }
+      {
+        catalogOrphaned && (
+          <p class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Your product list moved to <code>/products</code> when you set a custom home page,
+            and no menu links to it — shoppers currently have no way to reach your catalog. Add
+            a Catalog item in{' '}
+            <a href="/admin/navigation" class="underline hover:text-brand">
+              Navigation
+            </a>
+            .
+          </p>
+        )
+      }
+      <p class="mt-3 text-xs text-gray-400">
+        Only published pages and active products are listed. If the one you pick is later
+        unpublished or deleted, the home page falls back to the product list rather than
+        breaking. Saving purges affected storefront pages; a 10-minute TTL bounds a
+        transient purge failure.
+      </p>
+      <button
+        type="submit"
+        class="mt-4 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+      >
+        Save
+      </button>
+    </form>
+
+    <form method="POST" class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_announcement" />
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          Announcement bar
+          <input
+            type="text"
+            name="announcement"
+            value={announcement}
+            maxlength="200"
+            placeholder="e.g. Free shipping on orders over $50"
+            class="w-80 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          Link (optional)
+          <input
+            type="text"
+            name="announcement_href"
+            value={announcementHref}
+            placeholder="e.g. /categories/sale"
+            class="w-56 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+        </label>
+      </div>
+      <p class="mt-3 text-xs text-gray-400">
+        Shown above the header on every storefront page. Leave the message empty to hide the
+        bar. Storefront pages are cached briefly, so a change can take about a minute to
+        appear everywhere.
+      </p>
+      <button
+        type="submit"
+        class="mt-4 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+      >
+        Save
+      </button>
+    </form>
+
+    {/* Shipping used to be a toggle here while the zones lived in store.config.ts —
+        two controls that could disagree. Zones and rates now have their own page;
+        only the weight unit lives here, deliberately in a DIFFERENT form from the
+        rate editor so changing it can never reinterpret values typed on that page
+        (forms always re-render converted from grams). */}
+    <div class="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-4">
+      <a href="/admin/shipping" class="group block">
+        <p class="font-medium group-hover:text-brand">Shipping</p>
+        <p class="text-xs text-gray-500">
+          {effectiveShipping.enabled ? 'On' : 'Off'} ·{' '}
+          {effectiveShipping.zones.length}{' '}
+          {effectiveShipping.zones.length === 1 ? 'zone' : 'zones'} · zones, rates, and
+          free-shipping thresholds <span aria-hidden="true" class="text-brand">&rarr;</span>
+        </p>
+      </a>
+      <form method="POST" class="mt-4 border-t border-gray-100 pt-4">
+        <input type="hidden" name="_action" value="save_weight_unit" />
+        <div class="flex flex-wrap items-end gap-3">
+          <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+            Weight unit
+            <select
+              name="weight_unit"
+              class="w-24 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+            >
+              {WEIGHT_UNITS.map((u) => (
+                <option value={u} selected={u === weightUnit}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p class="mt-3 text-xs text-gray-400">
+          Product and rate weights are entered in this unit; stored values are always grams.
+        </p>
+        <button
+          type="submit"
+          class="mt-4 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+        >
+          Save
+        </button>
+      </form>
+    </div>
+
+    {/* Shipping labels are optional infrastructure like the payment rails: the
+        card is one token field, and nothing label-related renders anywhere else
+        until the token exists. */}
+    <div class="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-4">
+      <p class="font-medium">Shipping labels (Shippo)</p>
+      <p class="mt-1 text-xs text-gray-500">
+        Buy carrier labels from the order page using the recorded address and weight — tracking
+        is filled in and the shipped email sent automatically. A
+        <code class="text-[11px]">shippo_test_…</code> token buys fake labels for trying it out.
+      </p>
+      <form method="POST" class="mt-3 space-y-3">
+        <input type="hidden" name="_action" value="save_shippo" />
+        <SecretField name="shippo_api_key" label="API token" hint="shippo_live_… or shippo_test_…" storedInD1={inD1('shippo_api_key')} vault={vault} />
+        {vault && (
+          <button type="submit" class="mt-1 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+            Save
+          </button>
+        )}
+      </form>
+    </div>
+
+    <ul class="mb-10 divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {
+        featureRows.map((f) => (
+          <li class="flex items-center justify-between gap-4 px-4 py-4">
+            <div class="min-w-0">
+              <p class="font-medium">{f.label}</p>
+              <p class={f.available ? 'text-xs text-gray-500' : 'text-xs text-amber-700'}>
+                {f.available ? f.desc : f.reason}
+              </p>
+            </div>
+            {
+              f.available || f.on ? (
+                <form method="POST" class="shrink-0">
+                  <input type="hidden" name="_action" value="toggle_feature" />
+                  <input type="hidden" name="feature" value={f.key} />
+                  <input type="hidden" name="enabled" value={f.on ? '0' : '1'} />
+                  <button
+                    type="submit"
+                    role="switch"
+                    aria-checked={f.on ? 'true' : 'false'}
+                    aria-label={`${f.on ? 'Disable' : 'Enable'} ${f.label}`}
+                    class={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                      f.on ? 'bg-brand' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      class={`inline-block size-5 rounded-full bg-white shadow transition ${
+                        f.on ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </form>
+              ) : (
+                <span class="shrink-0 text-xs uppercase tracking-widest text-gray-400">
+                  Unavailable
+                </span>
+              )
+            }
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  {/* ── Images (runtime delivery selector) ───────────────────────────────── */}
+  <section id="images" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Images</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Choose how product images are delivered. This affects existing and new uploads without
+      changing the files stored in R2.
+    </p>
+
+    <form method="POST" class="mb-10 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="set_image_delivery" />
+      <fieldset class="space-y-3">
+        <legend class="sr-only">Image delivery</legend>
+        <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3">
+          <input
+            type="radio"
+            name="image_delivery"
+            value="original"
+            checked={settings.imageDelivery === 'original'}
+            class="mt-1 accent-brand"
+          />
+          <span>
+            <span class="block font-medium">Original images</span>
+            <span class="block text-xs text-gray-500">
+              Serve uploaded files unchanged. No transformation usage or additional setup.
+            </span>
+          </span>
+        </label>
+
+        <label
+          class:list={[
+            'flex items-start gap-3 rounded-md border border-line p-3',
+            onDemandImagesReady ? 'cursor-pointer' : 'cursor-not-allowed opacity-60',
+          ]}
+        >
+          <input
+            type="radio"
+            name="image_delivery"
+            value="cloudflare"
+            checked={settings.imageDelivery === 'cloudflare'}
+            disabled={!onDemandImagesReady}
+            class="mt-1 accent-brand"
+          />
+          <span>
+            <span class="block font-medium">
+              Cloudflare on-demand
+              {!onDemandImagesReady && (
+                <span class="ml-2 text-xs uppercase tracking-widest text-amber-700">
+                  Unavailable
+                </span>
+              )}
+            </span>
+            <span class={onDemandImagesReady ? 'block text-xs text-gray-500' : 'block text-xs text-amber-700'}>
+              {onDemandImagesReady
+                ? 'Responsive AVIF/WebP delivery with automatic format negotiation and original-image fallback.'
+                : 'Connect an HTTPS R2 custom domain, set IMAGE_BASE_URL, and enable Transformations for the storefront zone.'}
+            </span>
+            {onDemandImagesReady && (
+              <span class="mt-1 block text-xs text-amber-700">
+                Uses your Cloudflare Image Transformations quota. Each unique source-and-parameter
+                combination counts as a unique transformation.
+              </span>
+            )}
+          </span>
+        </label>
+      </fieldset>
+
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+        >
+          Save image delivery
+        </button>
+        <p class="text-xs text-gray-400">
+          Saving purges affected public pages; a 10-minute TTL bounds a transient purge failure.
+        </p>
+      </div>
+      <p class="mt-3 text-xs text-gray-400">
+        This controls delivery. <strong class="font-medium text-gray-500">Optimize images on upload</strong>
+        in General is a separate option that changes newly stored source files.
+      </p>
+    </form>
+  </section>
+
+  {/* ── Payments (keys + config grouped per method) ──────────────────────── */}
+  <section id="payments" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Payments</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Each method's config and keys are grouped together below. A method goes live once its key
+      (and, for Lightning, its node URL) is set; Demo is always available. Keys are stored
+      encrypted in D1 — write-only, never shown again.
+    </p>
+
+    {
+      !vault && (
+        <p class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Keys are encrypted under a <code>SECRETS_KEK</code> Worker secret, which isn't set — so the
+          key fields are disabled and only Demo can take orders. Set it
+          (<code>openssl rand -base64 32 | wrangler secret put SECRETS_KEK</code>), then redeploy.
+        </p>
+      )
+    }
+
+    {/* Store-wide default rail */}
+    <form method="POST" class="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_default" />
+      <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+        Default rail
+        <select
+          name="payment_provider"
+          class="w-48 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+        >
+          {
+            pmRows.map((row) => (
+              <option
+                value={row.m}
+                selected={payments.provider === row.m}
+                disabled={!row.enabled}
+              >
+                {row.label}{row.enabled ? '' : ' — unavailable'}
+              </option>
+            ))
+          }
+        </select>
+      </label>
+      <p class="mt-3 text-xs text-gray-400">
+        The enabled, configured method offered first at checkout.
+      </p>
+      <button
+        type="submit"
+        disabled={!pmRows.some((row) => row.enabled)}
+        class="mt-4 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-300"
+      >
+        Save
+      </button>
+    </form>
+
+    <div class="space-y-4">
+      {/* Card (Stripe) */}
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">Card (Stripe)</p>
+            <p class={pmMap.stripe.installed ? 'text-xs text-gray-500' : 'text-xs text-amber-700'}>
+              {pmMap.stripe.installed ? 'Live' : 'Add both Stripe keys to go live'}
+            </p>
+          </div>
+          {pmMap.stripe.installed && <MethodToggle method="stripe" enabled={pmMap.stripe.enabled} label="Card (Stripe)" />}
+        </div>
+        <form method="POST" class="space-y-3 border-t border-gray-100 pt-3">
+          <input type="hidden" name="_action" value="save_stripe" />
+          <SecretField name="stripe_secret_key" label="Secret key" hint="sk_live_… or sk_test_…" storedInD1={inD1('stripe_secret_key')} vault={vault} />
+          <SecretField name="stripe_webhook_secret" label="Webhook signing secret" hint="whsec_…" storedInD1={inD1('stripe_webhook_secret')} vault={vault} />
+          {vault && (
+            <button type="submit" class="mt-1 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+              Save
+            </button>
+          )}
+        </form>
+      </div>
+
+      {/* Lightning */}
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">Lightning</p>
+            <p class={pmMap.lightning.installed ? 'text-xs text-gray-500' : 'text-xs text-amber-700'}>
+              {pmMap.lightning.installed ? 'Live' : 'Pick a node, set its URL + key to go live'}
+            </p>
+          </div>
+          {pmMap.lightning.installed && <MethodToggle method="lightning" enabled={pmMap.lightning.enabled} label="Lightning" />}
+        </div>
+        <form method="POST" class="space-y-3 border-t border-gray-100 pt-3">
+          <input type="hidden" name="_action" value="save_lightning" />
+          <label class="flex w-fit flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+            Backend
+            <select name="lightning_backend" data-lightning-backend class="w-40 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none">
+              <option value="phoenixd" selected={payments.lightningBackend === 'phoenixd'}>phoenixd</option>
+              <option value="lnbits" selected={payments.lightningBackend === 'lnbits'}>LNbits</option>
+            </select>
+          </label>
+
+          <div
+            data-lightning-when="lnbits"
+            hidden={payments.lightningBackend !== 'lnbits'}
+            class="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-3"
+          >
+            <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+              LNbits URL
+              <input type="url" name="lnbits_url" value={payments.lnbitsUrl} required={payments.lightningBackend === 'lnbits'} data-lightning-required-when="lnbits" placeholder="https://lnbits.example.com" class="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none" />
+            </label>
+            <SecretField name="lnbits_api_key" label="LNbits invoice/read key" hint="invoice/read key (not admin)" storedInD1={inD1('lnbits_api_key')} vault={vault} required={payments.lightningBackend === 'lnbits'} requiredWhen="lnbits" />
+          </div>
+
+          <div
+            data-lightning-when="phoenixd"
+            hidden={payments.lightningBackend !== 'phoenixd'}
+            class="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-3"
+          >
+            <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+              phoenixd URL
+              <input type="url" name="phoenixd_url" value={payments.phoenixdUrl} required={payments.lightningBackend === 'phoenixd'} data-lightning-required-when="phoenixd" placeholder="https://ln.example.com" class="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none" />
+            </label>
+            <SecretField name="phoenixd_password" label="phoenixd password" hint="http-password-limited-access" storedInD1={inD1('phoenixd_password')} vault={vault} required={payments.lightningBackend === 'phoenixd'} requiredWhen="phoenixd" />
+          </div>
+          {vault && (
+            <button type="submit" class="mt-1 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+              Save
+            </button>
+          )}
+        </form>
+      </div>
+
+      {/* Bitcoin (OpenNode) */}
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">Bitcoin (OpenNode)</p>
+            <p class={pmMap.opennode.installed ? 'text-xs text-gray-500' : 'text-xs text-amber-700'}>
+              {pmMap.opennode.installed ? 'Live' : 'Add the API key to go live'}
+            </p>
+          </div>
+          {pmMap.opennode.installed && <MethodToggle method="opennode" enabled={pmMap.opennode.enabled} label="Bitcoin (OpenNode)" />}
+        </div>
+        <form method="POST" class="space-y-3 border-t border-gray-100 pt-3">
+          <input type="hidden" name="_action" value="save_opennode" />
+          <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+            API URL
+            <input type="url" name="opennode_api_url" value={payments.opennodeApiUrl} placeholder="(blank = live)" class="w-64 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none" />
+          </label>
+          <SecretField name="opennode_api_key" label="API key" hint="from the OpenNode dashboard" storedInD1={inD1('opennode_api_key')} vault={vault} />
+          <button type="submit" class="mt-1 rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+            Save
+          </button>
+        </form>
+      </div>
+
+      {/* Demo */}
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="font-medium">Demo checkout</p>
+            <p class="text-xs text-gray-500">
+              Always available — reserves stock and places a real, demo-tagged order (no charge).
+            </p>
+          </div>
+          <MethodToggle method="demo" enabled={pmMap.demo.enabled} label="Demo checkout" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  {/* ── Email (runtime config + vault key) ───────────────────────────────── */}
+  <section id="email" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Email</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Order-confirmation and customer-login email. <strong>Resend</strong> works on the Workers
+      free plan; <strong>Cloudflare</strong> uses the <code>send_email</code> binding (paid plan).
+      Sending to real customers needs a verified sender domain. Off or unconfigured = no-op (the
+      on-page order confirmation still shows).
+    </p>
+
+    <form method="POST" class="mb-4 space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_email" />
+      <label class="flex items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          name="email_enabled"
+          value="1"
+          checked={email.enabled && selectedEmailReady}
+          disabled={email.provider === 'cloudflare' && !emailBindingReady}
+          class="size-4"
+        />
+        <span class="font-medium">Send email</span>
+        {
+          email.provider === 'cloudflare' && !emailBindingReady && (
+            <span class="text-xs uppercase tracking-widest text-gray-400">Unavailable</span>
+          )
+        }
+      </label>
+      <div class="flex flex-wrap gap-4">
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          Provider
+          <select
+            name="email_provider"
+            data-email-provider
+            class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          >
+            <option value="resend" selected={email.provider === 'resend'}>Resend</option>
+            <option
+              value="cloudflare"
+              selected={email.provider === 'cloudflare'}
+              disabled={!emailBindingReady && email.provider !== 'cloudflare'}
+            >
+              Cloudflare — {emailBindingReady ? 'Workers Paid plan' : 'unavailable (EMAIL binding missing)'}
+            </option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          From address
+          <input
+            type="email"
+            name="email_from"
+            value={email.from}
+            placeholder={email.fromPlaceholder}
+            class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          From name
+          <input
+            type="text"
+            name="email_from_name"
+            value={email.fromName}
+            placeholder={storeName}
+            class="w-48 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+        </label>
+        <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+          New-order alerts to
+          <input
+            type="email"
+            name="email_notify_to"
+            value={email.notifyTo}
+            placeholder={email.notifyPlaceholder}
+            class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+          />
+          <span class="normal-case tracking-normal text-gray-400">Owner gets a "new order" email here. Blank = off.</span>
+        </label>
+      </div>
+
+      {/* Resend API key — shown only for the Resend provider. JS toggles it live as
+          the dropdown changes; the SSR `hidden` reflects the saved provider. */}
+      <div data-email-when="resend" hidden={email.provider !== 'resend'}>
+        <SecretField name="resend_api_key" label="Resend API key" hint="re_…" storedInD1={resendStoredInD1} vault={vault} />
+      </div>
+
+      {/* Cloudflare note — paid-plan requirement (+ binding warning if not wired). */}
+      <div data-email-when="cloudflare" hidden={email.provider !== 'cloudflare'}>
+        <p class={`rounded-md border px-3 py-2 text-xs ${emailBindingReady ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+          Cloudflare email requires a <strong>Workers Paid plan</strong> and an onboarded sender domain
+          (<code>wrangler email sending enable &lt;domain&gt;</code>).
+          {!emailBindingReady && (
+            <>
+              {' '}The <code>send_email</code> binding isn't declared in <code>wrangler.jsonc</code> yet, so
+              nothing will send until you add it and redeploy.
+            </>
+          )}
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+      >
+        Save
+      </button>
+    </form>
+
+    {/* Send a test email using the SAVED config (save first, then test). Posts to its
+        own endpoint, so the section-save handler ignores it. */}
+    <form method="POST" action="/api/admin/email/test" data-email-test class="mb-10 flex flex-wrap items-center gap-2">
+      <label class="text-xs uppercase tracking-widest text-gray-400">Send test email to</label>
+      <input
+        type="email"
+        name="test_to"
+        required
+        placeholder="you@example.com"
+        class="w-60 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={!email.enabled || !selectedEmailReady}
+        class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:text-gray-300"
+      >
+        Send test
+      </button>
+      <span data-email-test-result class="text-xs font-medium"></span>
+    </form>
+  </section>
+
+  {/* ── Bot protection (Turnstile) ───────────────────────────────────────── */}
+  <section id="turnstile" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Bot protection</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Cloudflare Turnstile challenge on admin login and customer account sign-in.
+      Off by default. Needs a <a href="https://dash.cloudflare.com/?to=/:account/turnstile" class="text-accent underline">Turnstile widget</a>
+      (sitekey + secret). Cloudflare's always-pass test keys work for local trials.
+    </p>
+
+    <form method="POST" class="mb-10 space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_turnstile" />
+      <label class="flex items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          name="turnstile_enabled"
+          value="1"
+          checked={turnstile.enabled && turnstileReady}
+          disabled={!vault}
+          class="size-4"
+        />
+        <span class="font-medium">Enable Turnstile</span>
+        {
+          !vault ? (
+            <span class="text-xs uppercase tracking-widest text-gray-400">Unavailable</span>
+          ) : !turnstileReady ? (
+            <span class="text-xs text-amber-700">Add both keys before enabling</span>
+          ) : null
+        }
+      </label>
+      <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
+        Site key (public)
+        <input
+          type="text"
+          name="turnstile_site_key"
+          value={turnstile.siteKey}
+          placeholder="0x4AAAAAAA…"
+          class="w-80 max-w-full rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal text-gray-900 focus:border-brand focus:outline-none"
+        />
+      </label>
+      {/* Secret key (encrypted vault) — part of this section's single save. */}
+      <SecretField name="turnstile_secret_key" label="Secret key" hint="0x4AAAAAAA…" storedInD1={turnstileSecretInD1} vault={vault} />
+      <button
+        type="submit"
+        class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
+      >
+        Save
+      </button>
+    </form>
+  </section>
+
+  {/* ── Search (runtime toggle) ──────────────────────────────────────────── */}
+  <section id="search" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Search</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      Keyword search (SQLite FTS5) works out of the box. Switch on semantic search to also
+      match by meaning using Workers AI + Vectorize — applies immediately, no redeploy.
+    </p>
+    <div class="mb-10 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div class="flex items-center justify-between gap-4 px-4 py-4">
+        <div class="min-w-0">
+          <p class="font-medium">Semantic search</p>
+          {
+            vectorBindingsReady ? (
+              <p class="text-xs text-gray-500">
+                {searchProvider === 'vector'
+                  ? 'On — results are ranked by meaning (hybrid with keyword). Reindex after turning on or after bulk product changes.'
+                  : 'Off — using keyword search (FTS5). Turn on to also match by meaning.'}
+              </p>
+            ) : (
+              <p class="text-xs text-amber-700">
+                Needs the <code>AI</code> + <code>VECTORIZE</code> bindings (declared in{' '}
+                <code>wrangler.jsonc</code>). Search stays on keyword until they're present.
+              </p>
+            )
+          }
+        </div>
+        {
+          vectorBindingsReady ? (
+            <form method="POST" class="shrink-0">
+              <input type="hidden" name="_action" value="set_search" />
+              <input
+                type="hidden"
+                name="provider"
+                value={searchProvider === 'vector' ? 'fts' : 'vector'}
+              />
+              <button
+                type="submit"
+                role="switch"
+                aria-checked={searchProvider === 'vector' ? 'true' : 'false'}
+                aria-label={`${searchProvider === 'vector' ? 'Disable' : 'Enable'} semantic search`}
+                class={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  searchProvider === 'vector' ? 'bg-brand' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  class={`inline-block size-5 rounded-full bg-white shadow transition ${
+                    searchProvider === 'vector' ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </form>
+          ) : (
+            <span class="shrink-0 text-xs uppercase tracking-widest text-gray-400">Unavailable</span>
+          )
+        }
+      </div>
+      {
+        searchProvider === 'vector' && vectorBindingsReady && (
+          <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 px-4 py-4">
+            <form method="POST" action="/api/admin/search/reindex" data-reindex-form>
+              <input type="hidden" name="cursor" value={reindexCursor} />
+              <input type="hidden" name="processed" value={String(reindexProcessed)} />
+              <button
+                type="submit"
+                class="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
+              >
+                <span data-reindex-label>
+                  {reindexCursor !== '' ? 'Continue reindex' : 'Reindex all products'}
+                </span>
+              </button>
+            </form>
+            <span class="text-xs text-gray-400" data-reindex-status aria-live="polite">
+              {reindexCursor !== ''
+                ? `${reindexProcessed} products complete. Continue with the next batch.`
+                : 'Embeds every product into Vectorize in small batches. Run once after turning this on, or to backfill.'}
+            </span>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  {/* ── Build-time config (needs a redeploy) ─────────────────────────────── */}
+  <section id="build-time" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">Build-time</h2>
+    <p class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+      The settings below are <strong>build-time</strong> (kept in code so the template clones
+      cleanly). Change the value shown, then redeploy with <code>npm run deploy</code>.
+    </p>
+    <dl class="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div class="grid grid-cols-3 gap-4 px-4 py-4">
+        <dt class="font-medium">Currency</dt>
+        <dd class="col-span-2">
+          <p class="mb-1">{currency.toUpperCase()} — e.g. {formatPrice(2500)}</p>
+          <p class="text-sm text-gray-500">
+            Override <code>currency</code> in <code>src/store.config.ts</code>. Drives all price formatting,
+            the new-product default, and checkout.
+          </p>
+        </dd>
+      </div>
+      <div class="grid grid-cols-3 gap-4 px-4 py-4">
+        <dt class="font-medium">Favicon</dt>
+        <dd class="col-span-2 flex items-start gap-3">
+          <img src="/favicon.svg" alt="Current favicon" width="40" height="40" class="h-10 w-10 rounded" />
+          <p class="text-sm text-gray-500">
+            Replace <code>public/favicon.svg</code> and regenerate <code>public/favicon.ico</code>
+            for clients that still request the legacy icon.
+          </p>
+        </dd>
+      </div>
+    </dl>
+  </section>
+
+  <script is:inline>
+    // Flash polish: fade the confirmation out, and strip any ?msg the URL still has
+    // (e.g. from the reindex redirect) so a refresh doesn't re-show it.
+    (function () {
+      var b = document.querySelector('[data-flash]');
+      if (b)
+        setTimeout(function () {
+          b.style.transition = 'opacity .4s';
+          b.style.opacity = '0';
+          setTimeout(function () {
+            b.remove();
+          }, 400);
+        }, 3500);
+      if (location.search.indexOf('msg=') !== -1)
+        history.replaceState(null, '', location.pathname + location.hash);
+    })();
+  </script>
+
+  <script is:inline>
+    // Reindex in bounded Worker requests. The server also carries the cursor
+    // through redirects, so without JS the same form becomes a Continue button.
+    (function () {
+      if (!window.fetch) return;
+      var form = document.querySelector('[data-reindex-form]');
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var button = form.querySelector('button[type="submit"]');
+        var label = form.querySelector('[data-reindex-label]');
+        var status = document.querySelector('[data-reindex-status]');
+        var cursor = form.querySelector('input[name="cursor"]');
+        var processed = form.querySelector('input[name="processed"]');
+        if (button) button.disabled = true;
+        if (label) label.textContent = 'Reindexing…';
+        if (status) status.textContent = 'Starting…';
+
+        function nextBatch() {
+          return fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {
+              Accept: 'application/json',
+              'X-Requested-With': 'fetch',
+            },
+          })
+            .then(function (response) {
+              return response.json().then(function (data) {
+                if (!response.ok) throw new Error(data.error || 'Reindex failed');
+                return data;
+              });
+            })
+            .then(function (data) {
+              if (status) status.textContent = data.processed + ' / ' + data.total + ' products';
+              if (data.done) {
+                if (cursor) cursor.value = '';
+                if (processed) processed.value = '0';
+                if (button) button.disabled = false;
+                if (label) label.textContent = 'Reindex all products';
+                if (status) {
+                  status.textContent = 'Reindexed ' + data.processed + ' products ✓';
+                  status.className = 'text-xs font-medium text-green-600';
+                }
+                return;
+              }
+              if (cursor) cursor.value = data.nextCursor || '';
+              if (processed) processed.value = String(data.processed || 0);
+              return nextBatch();
+            });
+        }
+
+        nextBatch().catch(function (error) {
+          if (button) button.disabled = false;
+          if (label) label.textContent = 'Continue reindex';
+          if (status) {
+            status.textContent = error && error.message ? error.message : 'Reindex failed';
+            status.className = 'text-xs font-medium text-red-600';
+          }
+        });
+      });
+    })();
+  </script>
+
+  <script is:inline>
+    // The selected Lightning backend owns the required URL + credential pair.
+    // Delegated events survive the settings section's inline-save replacement.
+    (function () {
+      function syncLightning(sel) {
+        var section = sel.closest('section');
+        if (!section) return;
+        var blocks = section.querySelectorAll('[data-lightning-when]');
+        Array.prototype.forEach.call(blocks, function (block) {
+          block.hidden = block.getAttribute('data-lightning-when') !== sel.value;
+        });
+        var fields = section.querySelectorAll('[data-lightning-required-when]');
+        Array.prototype.forEach.call(fields, function (field) {
+          var active = field.getAttribute('data-lightning-required-when') === sel.value;
+          var stored = field.getAttribute('data-secret-stored') === '1';
+          field.required = active && !stored;
+        });
+      }
+      document.addEventListener('change', function (e) {
+        var target = e.target;
+        if (target && target.matches && target.matches('[data-lightning-backend]')) {
+          syncLightning(target);
+        }
+      });
+    })();
+  </script>
+
+  <script is:inline>
+    // Inline saves (progressive enhancement). Without JS each section form POSTs
+    // normally (303 + flash). With JS we submit in the background, then re-fetch the
+    // page and swap just this section's freshly-rendered markup — so chips, inputs,
+    // and toggles update without a full reload or losing your scroll position.
+    (function () {
+      if (!window.fetch || !window.DOMParser) return;
+      var path = location.pathname;
+
+      function toast(scope, text, isErr) {
+        var prev = scope.querySelector('[data-toast]');
+        if (prev) prev.remove();
+        var n = document.createElement('span');
+        n.setAttribute('data-toast', '');
+        n.textContent = text;
+        n.className = 'ml-3 text-xs font-medium ' + (isErr ? 'text-red-600' : 'text-green-600');
+        var btn = scope.querySelector('button[type="submit"]');
+        if (btn && btn.parentNode) btn.parentNode.insertBefore(n, btn.nextSibling);
+        else scope.appendChild(n);
+        setTimeout(function () {
+          n.style.transition = 'opacity .5s';
+          n.style.opacity = '0';
+          setTimeout(function () { n.remove(); }, 500);
+        }, 2200);
+      }
+
+      function bind(scope) {
+        // Bind every section's same-page POST form. Querying without a descendant
+        // combinator so it works whether `scope` is the document OR a single swapped
+        // section node. form.method is lowercased by the DOM regardless of attr case;
+        // skip GET forms and ones that post elsewhere (e.g. the reindex API).
+        var forms = scope.querySelectorAll('form:not([action]):not([data-ajax])');
+        Array.prototype.forEach.call(forms, function (form) {
+          if (form.method !== 'post' || !form.closest('section[id]')) return;
+          form.setAttribute('data-ajax', '');
+          form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var section = form.closest('section[id]');
+            if (!section) return;
+            var isToggle = !!form.querySelector('[role="switch"]');
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = true;
+            fetch(path, {
+              method: 'POST',
+              body: new FormData(form),
+              headers: { 'X-Requested-With': 'fetch' },
+            })
+              .then(function (r) {
+                if (!r.ok) throw new Error('save');
+                return fetch(path, { headers: { 'X-Requested-With': 'fetch' } });
+              })
+              .then(function (r) { return r.text(); })
+              .then(function (html) {
+                var fresh = new DOMParser()
+                  .parseFromString(html, 'text/html')
+                  .getElementById(section.id);
+                if (!fresh) { location.reload(); return; }
+                section.replaceWith(fresh);
+                bind(fresh);
+                if (!isToggle) toast(fresh, 'Saved ✓', false);
+              })
+              .catch(function () {
+                if (btn) btn.disabled = false;
+                toast(form, 'Save failed — try again', true);
+              });
+          });
+        });
+      }
+      bind(document);
+    })();
+  </script>
+
+  <script is:inline>
+    // Email section: live-toggle the provider-specific block (Resend key vs the
+    // Cloudflare note) as the dropdown changes, and send a test email inline.
+    // Delegated from document so it survives the inline-save section swap.
+    (function () {
+      function syncProvider(sel) {
+        var section = sel.closest('section');
+        if (!section) return;
+        var blocks = section.querySelectorAll('[data-email-when]');
+        Array.prototype.forEach.call(blocks, function (el) {
+          el.hidden = el.getAttribute('data-email-when') !== sel.value;
+        });
+      }
+      document.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && t.matches && t.matches('[data-email-provider]')) syncProvider(t);
+      });
+
+      if (!window.fetch) return;
+      document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || !form.matches || !form.matches('[data-email-test]')) return;
+        e.preventDefault();
+        var btn = form.querySelector('button[type="submit"]');
+        var out = form.querySelector('[data-email-test-result]');
+        if (btn) btn.disabled = true;
+        if (out) { out.textContent = 'Sending…'; out.className = 'text-xs font-medium text-gray-500'; }
+        fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'X-Requested-With': 'fetch' },
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (out) {
+              out.textContent = d.message || (d.ok ? 'Sent.' : 'Failed.');
+              out.className = 'text-xs font-medium ' + (d.ok ? 'text-green-600' : 'text-red-600');
+            }
+          })
+          .catch(function () {
+            if (out) { out.textContent = 'Request failed.'; out.className = 'text-xs font-medium text-red-600'; }
+          })
+          .then(function () { if (btn) btn.disabled = false; });
+      });
+    })();
+  </script>
+</AdminLayout>
+
+<script>
+  // The logo picker sets the hidden key and submits, so choosing an image saves
+  // in one step. "Remove logo" clears the field first, and setSetting treats an
+  // empty value as a delete — restoring the text store name.
+  document.addEventListener('media:selected', (event) => {
+    const field = document.querySelector<HTMLInputElement>('[data-logo-key]');
+    if (!field) return; // another picker on the page (none today) — ignore
+    field.value = (event as CustomEvent).detail.imageKey;
+    field.form?.submit();
+  });
+
+  document.querySelector('[data-logo-remove]')?.addEventListener('click', (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const field = button.form?.querySelector<HTMLInputElement>('[data-logo-key]');
+    if (field) field.value = '';
+  });
+</script>

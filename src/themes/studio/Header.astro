@@ -1,0 +1,79 @@
+---
+import type { StorefrontShellModel } from '../../features/storefront/models';
+import StoreNav from '../../features/storefront/controls/StoreNav.astro';
+import StoreSearch from '../../features/storefront/controls/StoreSearch.astro';
+import StoreCartControl from '../../features/storefront/controls/StoreCartControl.astro';
+import StoreAccountControl from '../../features/storefront/controls/StoreAccountControl.astro';
+
+/**
+ * Studio — a masthead that gets out of the way.
+ *
+ * The wordmark is the only large thing; everything else is set in small caps at
+ * the right edge so the eye drops straight to the work. Not sticky: a gallery
+ * does not follow you around the room, and a fixed bar over a dark full-bleed
+ * image reads as a smudge.
+ *
+ * Renders on checkout, the pay page, and Admin login too, so the controls stay
+ * as they are.
+ */
+interface Props {
+  model: StorefrontShellModel;
+}
+
+const { model } = Astro.props;
+const small =
+  'text-[10px] font-medium uppercase tracking-[0.24em] text-[color:var(--studio-muted)] hover:text-[color:var(--studio-bone)]';
+---
+
+{
+  model.announcement && (
+    <div class="bg-brand px-4 py-2.5 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-paper)]">
+      {model.announcement.href ? (
+        <a href={model.announcement.href} class="underline-offset-4 hover:underline">
+          {model.announcement.text}
+        </a>
+      ) : (
+        model.announcement.text
+      )}
+    </div>
+  )
+}
+
+<header class="border-b border-line">
+  <div class="mx-auto flex max-w-[96rem] flex-wrap items-baseline gap-x-10 gap-y-4 px-12 pb-6 pt-8">
+    <a href="/" aria-label={model.storeName} class="shrink-0">
+      {
+        model.logo ? (
+          <img src={model.logo.src} alt={model.logo.alt} class="h-9 max-w-52 object-contain" />
+        ) : (
+          <span class="font-serif text-3xl tracking-[-0.02em]">{model.storeName}</span>
+        )
+      }
+    </a>
+
+    <nav aria-label="Store" class="ml-auto flex min-w-0 items-center gap-6">
+      <StoreNav
+        links={model.headerLinks}
+        class={`hidden min-w-0 items-center gap-6 xl:flex ${small}`}
+        disclosureClass={`relative order-last xl:hidden ${small}`}
+      />
+      <a href={model.search.action} class={`${small} sm:hidden`}>Search</a>
+      {model.account.enabled && <StoreAccountControl href={model.account.href} class={small} />}
+      {
+        model.cart.enabled && (
+          <StoreCartControl
+            href={model.cart.href}
+            class="inline-flex items-center text-[10px] font-medium uppercase tracking-[0.24em] text-[color:var(--studio-bone)] hover:text-brand"
+          />
+        )
+      }
+    </nav>
+
+    <StoreSearch
+      action={model.search.action}
+      query={model.search.query}
+      class="hidden w-full border-b border-line pb-1 focus-within:border-brand sm:block sm:w-56"
+      inputClass="w-full bg-transparent px-0 py-0.5 text-sm focus:outline-none"
+    />
+  </div>
+</header>

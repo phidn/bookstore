@@ -1,0 +1,41 @@
+---
+import { env } from 'cloudflare:workers';
+import Layout from '../../layouts/Layout.astro';
+import ContentPage from '#theme/ContentPage.astro';
+import { getConfig } from '../../config';
+import { getPublishedPageBySlug } from '../../features/pages/db';
+import { pageImageDimensions } from '../../features/media/db';
+import { renderMarkdown, markdownExcerpt } from '../../features/pages/markdown';
+import { normalizePageLayout, pageLayoutStyle } from '../../features/pages/layouts';
+
+const { slug } = Astro.params;
+const page = slug ? await getPublishedPageBySlug(env.DB, slug) : null;
+
+// Drafts are indistinguishable from missing pages here — the query filters on
+// published, so an unpublished slug is a 404 rather than a private preview.
+if (!page) {
+  // Middleware only stores 200s in the shared cache, so no-store is about caches
+  // we do NOT control: 404 is heuristically cacheable, and a browser or proxy
+  // holding one would keep serving it after the page goes live.
+  return new Response('Not found', {
+    status: 404,
+    headers: { 'cache-control': 'no-store' },
+  });
+}
+
+// One indexed read, on an edge-cached route, so body images can carry their
+// intrinsic size and stop shifting the layout when they load.
+const dimensions = await pageImageDimensions(env.DB, page.id);
+const html = renderMarkdown(page.body_markdown, {
+  baseUrl: getConfig().images.baseUrl,
+  dimensions,
+});
+const description = markdownExcerpt(page.body_markdown);
+const layout = normalizePageLayout(page.layout);
+---
+
+<Layout title={page.title} description={description}>
+  <ContentPage
+    model={{ title: page.title, html, layout, layoutStyle: pageLayoutStyle(layout) }}
+  />
+</Layout>

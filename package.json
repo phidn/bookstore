@@ -1,0 +1,63 @@
+{
+  "name": "minshop",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler dev -c dist/server/wrangler.json --persist-to .wrangler/state",
+    "deploy": "node --experimental-strip-types scripts/deploy.mjs",
+    "deploy:ci": "node --experimental-strip-types scripts/deploy.mjs --skip-build",
+    "check": "npm run theme:sync && astro check",
+    "test": "npm run theme:sync && vitest run",
+    "test:watch": "vitest",
+    "test:integration": "node --experimental-strip-types test/integration/reservations.mjs && node --experimental-strip-types test/integration/refunds.mjs && node --experimental-strip-types test/integration/media.mjs && node --experimental-strip-types test/integration/menus.mjs && node --experimental-strip-types test/integration/guest-access.mjs && node --experimental-strip-types test/integration/shipping.mjs && bash test/integration/d1-integration.sh",
+    "test:d1": "astro build && npm run test:integration",
+    "test:storefront-equivalence": "astro build && bash test/integration/storefront-baselines.sh",
+    "test:storefront-contract": "vitest run test/storefront",
+    "theme:check": "node scripts/check-themes.mjs",
+    "verify": "npm run theme:sync && vitest run && astro check && npm run theme:check && astro build && node scripts/check-built-css.mjs && npm run test:integration && node --experimental-strip-types scripts/check-stripe-countries.mjs && npm run mcp:check && npm run scaffold:check",
+    "verify:theme": "node scripts/verify-theme.mjs",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:seed": "wrangler d1 execute DB --local --file=./seed.sql",
+    "provision:cf": "bash scripts/provision-cf.sh",
+    "provision:local": "bash scripts/provision-local.sh",
+    "destroy:cf": "bash scripts/destroy-cf.sh",
+    "destroy:local": "bash scripts/destroy-local.sh",
+    "admin:reset": "bash scripts/admin-reset.sh",
+    "admin:reset:remote": "bash scripts/admin-reset.sh --remote",
+    "reset:local": "bash scripts/reset.sh",
+    "reset:remote": "bash scripts/reset.sh --remote",
+    "mcp:dev": "wrangler dev --config mcp/wrangler.jsonc --persist-to .wrangler/state",
+    "mcp:deploy": "wrangler deploy --config mcp/wrangler.jsonc",
+    "mcp:check": "bash scripts/check-mcp.sh",
+    "scaffold:check": "npm test --prefix create-minshop && npm pack ./create-minshop --dry-run",
+    "theme:sync": "node scripts/theme-sync.mjs",
+    "db:seed:storefront-states": "bash scripts/seed-storefront-states.sh"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.1.7",
+    "astro": "^7.1.6",
+    "markdown-it": "^15.0.0",
+    "stripe": "^22.4.0",
+    "uqr": "^0.1.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/markdown-it": "^14.1.2",
+    "miniflare": "^4.20260730.0",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.118.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "undici": "^7.29.0"
+    }
+  }
+}
