@@ -5,10 +5,14 @@
 - **Mục tiêu ưu tiên:** Sẵn sàng cho việc tùy biến giao diện, cấu hình storefront, tích hợp cổng thanh toán và mở rộng các luồng agent autonomous shopping/operating.
 
 ## 2. Active Focus
-- [x] Hoàn thành gần nhất: Squash toàn bộ commit cũ của ddyy thành "init commit", update author/committer thành phidn <phidnhh@gmail.com>, và force push lên phidn/bookstore.
-- [/] Đang thực hiện: Hoàn tất bàn giao và duy trì Active State.
-- [ ] Việc tiếp theo: Tùy biến storefront, giao diện hoặc bổ sung tính năng e-commerce theo yêu cầu.
+- [x] Hoàn thành gần nhất: Khởi tạo GitHub Issues/Project tracker cho bookstore:
+  - Issue #3: [Task 1: Tạo Theme Brand cho Bookstore (Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/3)
+  - Issue #4: [Task 2: Tạo Homepage cho Bookstore (Trang chủ Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/4)
+- [/] Đang thực hiện: Chuẩn bị triển khai Task 1 (Theme Brand) và Task 2 (Homepage).
+- [ ] Việc tiếp theo: Thiết kế `tokens.css` và tùy biến các component theme cho Tiểu Viện Hữu Thư.
 
 ## 3. Quick Navigation
 - Tri thức & Hướng dẫn: `docs/wiki/INDEX.md`
 - Quyết định kiến trúc & Nghiệp vụ: `docs/adr/INDEX.md`
+- Issue Tracker: https://github.com/phidn/bookstore/issues
+
