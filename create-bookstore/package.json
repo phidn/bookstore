@@ -28,12 +28,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ddyy/minshop.git",
+    "url": "git+https://github.com/phidn/bookstore.git",
     "directory": "create-bookstore"
   },
-  "homepage": "https://github.com/ddyy/minshop#readme",
+  "homepage": "https://github.com/phidn/bookstore#readme",
   "bugs": {
-    "url": "https://github.com/ddyy/minshop/issues"
+    "url": "https://github.com/phidn/bookstore/issues"
   },
   "license": "MIT",
   "publishConfig": {

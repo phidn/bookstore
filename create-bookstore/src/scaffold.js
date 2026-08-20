@@ -2,7 +2,7 @@ import { cpSync, existsSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-export const TEMPLATE_REPOSITORY = 'https://github.com/ddyy/minshop.git';
+export const TEMPLATE_REPOSITORY = 'https://github.com/phidn/bookstore.git';
 export const usage = `Create a new Bookstore storefront.
 
 Usage:
