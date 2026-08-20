@@ -113,7 +113,7 @@ export interface SiteConfig {
    * port (features/payments), so this just selects which adapter is active:
    * - 'stripe'    — hosted card checkout (default).
    * - 'lightning' — Bitcoin Lightning via a self-hosted node (phoenixd / LNbits);
-   *                 minshop mints a BOLT11 invoice and renders its own /pay page.
+   *                 bookstore mints a BOLT11 invoice and renders its own /pay page.
    * - 'opennode'  — hosted Lightning checkout (OpenNode; custodial processor).
    * Overridable per-environment via the PAYMENT_PROVIDER var (wrangler.jsonc).
    * NOTE: the Lightning flows are total-of-line-items only — shipping address,

@@ -28,5 +28,5 @@
    classifying by sentinel utilities would let a leak reclassify the Admin
    sheet as a storefront sheet and dodge the isolation check. */
 :root {
-  --minshop-css-entry: storefront;
+  --bookstore-css-entry: storefront;
 }

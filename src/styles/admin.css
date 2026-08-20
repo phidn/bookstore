@@ -53,7 +53,7 @@
 
 /* Entry marker — see the note in global.css. */
 :root {
-  --minshop-css-entry: admin;
+  --bookstore-css-entry: admin;
   --background: #ffffff;
   --foreground: #111827;
   --card: #ffffff;

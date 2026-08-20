@@ -1,9 +1,9 @@
 {
-  "name": "minshop-mcp",
+  "name": "bookstore-mcp",
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Standalone MCP server Worker for minshop (agent-operated store). Own deps so the Agents SDK never perturbs the storefront build.",
+  "description": "Standalone MCP server Worker for bookstore (agent-operated store). Own deps so the Agents SDK never perturbs the storefront build.",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "agents": "^0.20.1",

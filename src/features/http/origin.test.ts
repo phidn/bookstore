@@ -9,18 +9,18 @@ describe('publicOrigin', () => {
   });
 
   it('uses and normalizes the configured HTTPS origin', () => {
-    expect(publicOrigin('https://alternate.example', ' https://demo.minshop.dev/ ')).toBe(
-      'https://demo.minshop.dev',
+    expect(publicOrigin('https://alternate.example', ' https://demo.bookstore.dev/ ')).toBe(
+      'https://demo.bookstore.dev',
     );
   });
 
   it.each([
     '',
-    'http://demo.minshop.dev',
-    'https://demo.minshop.dev/store',
-    'https://demo.minshop.dev/?preview=1',
-    'https://demo.minshop.dev/#top',
-    'https://user:pass@demo.minshop.dev',
+    'http://demo.bookstore.dev',
+    'https://demo.bookstore.dev/store',
+    'https://demo.bookstore.dev/?preview=1',
+    'https://demo.bookstore.dev/#top',
+    'https://user:pass@demo.bookstore.dev',
   ])('rejects an unsafe configured value: %j', (configured) => {
     expect(() => publicOrigin('https://fallback.example', configured)).toThrow(
       /CANONICAL_ORIGIN/,

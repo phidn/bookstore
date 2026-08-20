@@ -12,7 +12,7 @@ import { getSetting } from './features/settings/db';
  * wrangler `main` pointing here is what swaps it. See the Cloudflare adapter's
  * custom-entrypoint docs.)
  *
- * WHY a cron at all: every recurring job in minshop was previously driven by
+ * WHY a cron at all: every recurring job in bookstore was previously driven by
  * incoming traffic — the notification sweep piggybacks on live settlements, and
  * expired inventory holds are released by the NEXT shopper's reservation. That
  * inverts the risk: the quieter the store, the longer a failed confirmation

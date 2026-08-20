@@ -15,7 +15,7 @@ import {
   normalizeThemeId,
   parseArguments,
   resolveThemeId,
-  scaffoldMinshop,
+  scaffoldBookstore,
 } from '../src/scaffold.js';
 
 function run(command, args, cwd) {
@@ -25,7 +25,7 @@ function run(command, args, cwd) {
 
 function createTemplateRepository(root) {
   const repository = join(root, 'template');
-  mkdirSync(join(repository, 'create-minshop'), { recursive: true });
+  mkdirSync(join(repository, 'create-bookstore'), { recursive: true });
   mkdirSync(join(repository, '.github', 'workflows'), { recursive: true });
   mkdirSync(join(repository, 'mcp'), { recursive: true });
   mkdirSync(join(repository, 'scripts'), { recursive: true });
@@ -47,11 +47,11 @@ function createTemplateRepository(root) {
   );
   writeFileSync(join(repository, 'src', 'themes', 'default', 'tokens.css'), ':root{}\n');
   writeFileSync(join(repository, 'theme.config.json'), '{\n  "theme": "default"\n}\n');
-  writeFileSync(join(repository, 'package.json'), '{"name":"minshop","private":true}\n');
+  writeFileSync(join(repository, 'package.json'), '{"name":"bookstore","private":true}\n');
   writeFileSync(join(repository, 'store.txt'), 'storefront\n');
-  writeFileSync(join(repository, 'create-minshop', 'package.json'), '{}\n');
+  writeFileSync(join(repository, 'create-bookstore', 'package.json'), '{}\n');
   writeFileSync(
-    join(repository, '.github', 'workflows', 'publish-create-minshop.yml'),
+    join(repository, '.github', 'workflows', 'publish-create-bookstore.yml'),
     'name: Publish\n',
   );
   run('git', ['init', '--initial-branch=main'], repository);
@@ -60,7 +60,7 @@ function createTemplateRepository(root) {
     'git',
     [
       '-c',
-      'user.name=Minshop Tests',
+      'user.name=Bookstore Tests',
       '-c',
       'user.email=tests@example.com',
       'commit',
@@ -94,10 +94,10 @@ test('rejects unsupported Node release lines', () => {
 });
 
 test('scaffolds a clean storefront repository', () => {
-  const root = mkdtempSync(join(tmpdir(), 'create-minshop-'));
+  const root = mkdtempSync(join(tmpdir(), 'create-bookstore-'));
   const repository = createTemplateRepository(root);
 
-  const result = scaffoldMinshop({
+  const result = scaffoldBookstore({
     directory: 'new-store',
     install: false,
     cwd: root,
@@ -106,7 +106,7 @@ test('scaffolds a clean storefront repository', () => {
   });
 
   assert.equal(readFileSync(join(result.target, 'store.txt'), 'utf8'), 'storefront\n');
-  assert.equal(readFileSync(join(result.target, 'package.json'), 'utf8').includes('minshop'), true);
+  assert.equal(readFileSync(join(result.target, 'package.json'), 'utf8').includes('bookstore'), true);
   assert.equal(spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
     cwd: result.target,
     encoding: 'utf8',
@@ -115,19 +115,19 @@ test('scaffolds a clean storefront repository', () => {
     cwd: result.target,
     encoding: 'utf8',
   }).status, 128);
-  assert.equal(existsSync(join(result.target, 'create-minshop')), false);
+  assert.equal(existsSync(join(result.target, 'create-bookstore')), false);
   assert.equal(
-    existsSync(join(result.target, '.github', 'workflows', 'publish-create-minshop.yml')),
+    existsSync(join(result.target, '.github', 'workflows', 'publish-create-bookstore.yml')),
     false,
   );
 });
 
 test('refuses to overwrite an existing target', () => {
-  const root = mkdtempSync(join(tmpdir(), 'create-minshop-'));
+  const root = mkdtempSync(join(tmpdir(), 'create-bookstore-'));
   mkdirSync(join(root, 'existing'));
   assert.throws(
     () =>
-      scaffoldMinshop({
+      scaffoldBookstore({
         directory: 'existing',
         install: false,
         cwd: root,
@@ -144,7 +144,7 @@ test('derives a theme id from the target directory', () => {
 });
 
 test('suffixes rather than fails when the directory name is reserved', () => {
-  // `minshop` is the documented default directory, and a store must not own the
+  // `bookstore` is the documented default directory, and a store must not own the
   // upstream `default` theme — but the user did not choose that collision.
   assert.equal(resolveThemeId(null, '/tmp/default'), 'default-store');
 });
@@ -175,10 +175,10 @@ test('normalizeThemeId returns null when nothing usable survives', () => {
 });
 
 test('gives the generated store its own theme, selected', () => {
-  const root = mkdtempSync(join(tmpdir(), 'create-minshop-'));
+  const root = mkdtempSync(join(tmpdir(), 'create-bookstore-'));
   const repository = createTemplateRepository(root);
 
-  const result = scaffoldMinshop({
+  const result = scaffoldBookstore({
     directory: 'acme-supply',
     install: false,
     cwd: root,
@@ -198,10 +198,10 @@ test('gives the generated store its own theme, selected', () => {
 });
 
 test('the generated repository CI matrix discovers every theme it carries', () => {
-  const root = mkdtempSync(join(tmpdir(), 'create-minshop-'));
+  const root = mkdtempSync(join(tmpdir(), 'create-bookstore-'));
   const repository = createTemplateRepository(root);
 
-  const result = scaffoldMinshop({
+  const result = scaffoldBookstore({
     directory: 'acme-supply',
     install: false,
     cwd: root,
@@ -235,10 +235,10 @@ test('the generated repository CI matrix discovers every theme it carries', () =
 });
 
 test('honours an explicit --theme id', () => {
-  const root = mkdtempSync(join(tmpdir(), 'create-minshop-'));
+  const root = mkdtempSync(join(tmpdir(), 'create-bookstore-'));
   const repository = createTemplateRepository(root);
 
-  const result = scaffoldMinshop({
+  const result = scaffoldBookstore({
     directory: 'new-store',
     theme: 'northwind',
     install: false,

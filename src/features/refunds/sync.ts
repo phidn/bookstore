@@ -110,7 +110,7 @@ export async function applyRefundEvent(
     .bind(input.providerPaymentId)
     .first<OrderRow>();
 
-  // Orders settled before minshop stored payment ids have only a session id, so
+  // Orders settled before bookstore stored payment ids have only a session id, so
   // the lookup above finds nothing. Ask the provider which session produced this
   // payment, then backfill — otherwise these orders can never be reconciled
   // without hand-editing the database.

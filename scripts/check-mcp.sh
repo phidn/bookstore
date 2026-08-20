@@ -10,8 +10,8 @@ cleanup() { rm -f "$check_config"; }
 trap cleanup EXIT INT TERM
 
 sed \
-  -e 's/__NAME__/minshop-check/g' \
-  -e 's/__DB_NAME__/minshop-check-db/g' \
+  -e 's/__NAME__/bookstore-check/g' \
+  -e 's/__DB_NAME__/bookstore-check-db/g' \
   -e 's/__DB_ID__/00000000-0000-0000-0000-000000000000/g' \
   "$root/mcp/wrangler.template.jsonc" > "$check_config"
 

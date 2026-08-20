@@ -1,4 +1,4 @@
-const AUTH_SCHEME = 'MinshopDeploy';
+const AUTH_SCHEME = 'BookstoreDeploy';
 const MESSAGE_SCOPE = 'cache-deploy-purge:v1';
 export const DEPLOY_PURGE_WINDOW_SECONDS = 5 * 60;
 
@@ -51,7 +51,7 @@ export async function verifyDeployPurgeAuthorization(
   secret: string,
   nowSeconds: number,
 ): Promise<boolean> {
-  const match = authorization?.match(/^MinshopDeploy ([0-9]{10})\.([0-9a-f]{64})$/);
+  const match = authorization?.match(/^BookstoreDeploy ([0-9]{10})\.([0-9a-f]{64})$/);
   if (!match) return false;
   const [, timestamp, providedSignature] = match;
   const signedAt = Number(timestamp);

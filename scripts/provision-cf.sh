@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Provision + deploy a FRESH, fully-independent minshop instance:
+# Provision + deploy a FRESH, fully-independent bookstore instance:
 #   its own D1 database, public-image and private-file R2 buckets, Worker, and
 #   secrets (AUTH_SECRET + SECRETS_KEK).
 #   FREE-PLAN default — optional integrations (Vectorize/AI, Images, send_email) are

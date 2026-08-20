@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync } from 'node:fs';
-import { scaffoldMinshop, parseArguments, usage } from '../src/scaffold.js';
+import { scaffoldBookstore, parseArguments, usage } from '../src/scaffold.js';
 
 const packageJson = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
@@ -18,8 +18,8 @@ try {
     process.exit(0);
   }
 
-  const result = scaffoldMinshop(options);
-  process.stdout.write(`\nMinshop is ready in ${result.relativeTarget}\n\n`);
+  const result = scaffoldBookstore(options);
+  process.stdout.write(`\nBookstore is ready in ${result.relativeTarget}\n\n`);
   process.stdout.write(`  cd ${result.shellTarget}\n`);
   if (!options.install) {
     process.stdout.write('  npm ci\n');
@@ -31,6 +31,6 @@ try {
   process.stdout.write('  npx wrangler login\n');
   process.stdout.write('  npm run provision:cf my-store\n\n');
 } catch (error) {
-  process.stderr.write(`create-minshop: ${error.message}\n`);
+  process.stderr.write(`create-bookstore: ${error.message}\n`);
   process.exit(1);
 }

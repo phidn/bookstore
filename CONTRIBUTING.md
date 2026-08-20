@@ -1,4 +1,4 @@
-# Contributing to minshop
+# Contributing to bookstore
 
 Thanks for wanting to help. Small, focused PRs land fast here; big surprise PRs
 usually stall. This page covers the mechanics. [AGENTS.md](AGENTS.md) is the

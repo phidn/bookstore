@@ -9,6 +9,9 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&subset=vietnamese&display=swap">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -21,10 +24,13 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <meta property="og:description" content="pagination fixture">
 <meta property="og:url" content="https://canonical.example/products/pagination-item-3">
 <meta property="og:image" content="https://canonical.example/placeholder.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Pagination Item 3 — My Shop">
 <meta name="twitter:description" content="pagination fixture">
 <meta name="twitter:image" content="https://canonical.example/placeholder.png">
+<meta name="twitter:image:alt" content="Pagination Item 3 — My Shop">
 <script>
       document.documentElement.classList.add('image-fade-enabled');
       const finishImageFade = (event) => {
@@ -40,8 +46,8 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 </head>
 <body class="flex min-h-screen flex-col bg-paper text-ink antialiased">
 <header class="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
-<div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5">
-<a href="/" aria-label="My Shop" class="font-serif text-2xl tracking-tight">
+<div class="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4 sm:gap-6 sm:py-5">
+<a href="/" aria-label="My Shop" class="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-serif text-base tracking-tight sm:text-2xl">
 <span>My Shop</span>
 </a>
 <form method="GET" action="/search" class="ml-auto hidden flex-1 justify-end sm:flex" role="search">
@@ -86,8 +92,10 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <a href="/categories/apparel" class="hover:text-brand">Apparel</a>
 </div>
 <h1 class="font-serif text-4xl tracking-tight">Pagination Item 3</h1>
-<p class="mt-4 text-2xl tabular-nums text-muted" data-price-display data-base="1003" data-currency="usd">$10.03</p>
-<p class="mt-6 max-w-prose leading-relaxed text-muted">pagination fixture</p>
+<p class="mt-4 text-2xl tabular-nums text-muted" data-price-display data-base="1003" data-currency="vnd">₫1,003</p>
+<div class="markdown-content mt-6 max-w-prose text-muted">
+<p>pagination fixture</p>
+</div>
 <div class="mt-10 flex gap-3">
 <form method="POST" action="/api/cart">
 <input type="hidden" name="_action" value="add">
@@ -126,7 +134,7 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <span class="absolute left-3 top-3 rounded-full bg-surface/90 px-2.5 py-0.5 text-xs uppercase tracking-widest text-muted ring-1 ring-line">Sold out</span>
 </div>
 <h3 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 1</h3>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.01</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,001</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:60ms">
@@ -135,7 +143,7 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <img src="/placeholder.png" alt="Pagination Item 2" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h3 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 2</h3>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.02</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,002</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:120ms">
@@ -144,7 +152,7 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <img src="/placeholder.png" alt="Pagination Item 4" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h3 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 4</h3>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.04</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,004</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:180ms">
@@ -153,12 +161,12 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 <img src="/placeholder.png" alt="Sample Tee" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h3 class="mt-4 text-sm font-medium tracking-tight">Sample Tee</h3>
-<p class="mt-1 text-sm tabular-nums text-muted">$25.00</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫2,500</p>
 </a>
 </li>
 </ul>
 </section>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Pagination Item 3","description":"pagination fixture","image":"https://canonical.example/placeholder.png","offers":{"@type":"Offer","price":"10.03","priceCurrency":"USD","availability":"https://schema.org/InStock","url":"https://canonical.example/products/pagination-item-3"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Pagination Item 3","description":"pagination fixture","image":"https://canonical.example/placeholder.png","offers":{"@type":"Offer","price":"1003","priceCurrency":"VND","availability":"https://schema.org/InStock","url":"https://canonical.example/products/pagination-item-3"}}</script>
 <script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-options-form]`),t=document.querySelector(`[data-price-display]`),n=document.querySelector(`[data-hero-track]`);if(e instanceof HTMLFormElement&&t instanceof HTMLElement){let r=(t.dataset.currency||`usd`).toUpperCase(),i=Number(t.dataset.base||`0`),a=new Intl.NumberFormat(`en-US`,{style:`currency`,currency:r}),o=10**(a.resolvedOptions().maximumFractionDigits??2),s=e=>{if(!(n instanceof HTMLElement)||!e)return;let t=document.getElementById(`pi-${e}`);t instanceof HTMLElement&&n.contains(t)&&(n.scrollLeft=t.offsetLeft)},c=n=>{let r=e.querySelector(`input[name="variant_id"]:checked`),c=r?Number(r.getAttribute(`data-price`)):i;for(let t of e.querySelectorAll(`input[name="extra"]:checked`))c+=Number(t.getAttribute(`data-price`))||0;t.textContent=a.format(c/o),n&&r&&s(r.getAttribute(`data-image-id`)||``)};e.addEventListener(`change`,()=>c(!0)),c(!0)}</script>
 <script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-share]`);if(e instanceof HTMLElement){let t=typeof navigator.share==`function`,n=!!navigator.clipboard?.writeText;if(t||n){e.classList.remove(`hidden`),e.classList.add(`inline-flex`);let n=e.querySelector(`[data-share-label]`);e.addEventListener(`click`,async()=>{let r=location.href,i=e.dataset.shareTitle||document.title;if(t){try{await navigator.share({title:i,url:r})}catch{}return}if(await navigator.clipboard.writeText(r),n){let e=n.textContent;n.textContent=`Link copied`,setTimeout(()=>{n.textContent=e},1500)}})}}</script>
 </main>
@@ -179,6 +187,6 @@ cache-tag: catalog,product:prod_<id>,product:prod_<id>,product:prod_<id>,product
 </div>
 </aside>
 </div>
-<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`minshop_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
+<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`bookstore_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
 </body>
 </html>

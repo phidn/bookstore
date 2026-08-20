@@ -1,4 +1,4 @@
-name: Publish create-minshop
+name: Publish create-bookstore
 
 on:
   release:
@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 10
     defaults:
       run:
-        working-directory: create-minshop
+        working-directory: create-bookstore
 
     steps:
       - name: Check out repository

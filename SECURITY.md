@@ -1,12 +1,12 @@
 # Security policy
 
-minshop handles checkout, payment webhooks, and merchant credentials, so
+bookstore handles checkout, payment webhooks, and merchant credentials, so
 security reports get priority over everything else.
 
 ## Reporting a vulnerability
 
 Use GitHub's private reporting:
-[Report a vulnerability](https://github.com/ddyy/minshop/security/advisories/new).
+[Report a vulnerability](https://github.com/ddyy/bookstore/security/advisories/new).
 That opens a private advisory only the maintainer can see, keeps the whole
 thread in one place, and credits you if the report leads to a fix. If you'd
 rather not use GitHub, email **dev@daniel-yang.com**.
@@ -18,8 +18,8 @@ public disclosure. Reports that include a working proof of concept
 against a local or demo store are the fastest to act on.
 
 Please don't test against stores you don't own. The
-[live demo](https://demo.minshop.dev/) uses test payments only, but it's a
-shared instance; spin up your own with `npm create minshop@latest` instead.
+[live demo](https://demo.bookstore.dev/) uses test payments only, but it's a
+shared instance; spin up your own with `npm create bookstore@latest` instead.
 
 ## Supported versions
 
@@ -34,5 +34,5 @@ ship as a new release.
 - The demo payment rail is intentionally fake and places test orders; that's
   a feature, not a finding.
 - Vulnerabilities in upstream dependencies (Astro, wrangler, provider SDKs)
-  are best reported upstream, but a note here is welcome if minshop's usage
+  are best reported upstream, but a note here is welcome if bookstore's usage
   makes them exploitable.

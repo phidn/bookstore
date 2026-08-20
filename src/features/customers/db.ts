@@ -2,7 +2,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { Order } from '../orders/db';
 
 /**
- * Customers are not a stored entity — minshop is guest-checkout. This is a
+ * Customers are not a stored entity — bookstore is guest-checkout. This is a
  * read-only view derived from the orders table (grouped by email), so there's
  * no extra PII collected beyond what orders already hold.
  */

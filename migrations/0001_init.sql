@@ -1,7 +1,7 @@
 -- 0001_init — initial schema (products, orders, order_items).
 -- Migrations are additive and non-destructive: no DROP, IF NOT EXISTS so a
 -- re-run on an existing DB is a safe no-op. Apply with:
---   wrangler d1 migrations apply minshop-db --local   (or --remote)
+--   wrangler d1 migrations apply bookstore-db --local   (or --remote)
 
 CREATE TABLE IF NOT EXISTS products (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,

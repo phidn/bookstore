@@ -17,7 +17,7 @@ const remaining = refundableCents(order);
 const method = order.payment_method;
 
 // Which controls make sense depends on what the rail can actually do, not on
-// what minshop would like it to do. Only Stripe can be refunded through an API;
+// what bookstore would like it to do. Only Stripe can be refunded through an API;
 // everything else is money the merchant moved themselves and is telling us about.
 const canRefundViaProvider =
   (method === 'stripe' || method == null) &&
@@ -165,7 +165,7 @@ const dollars = (cents: number) => (cents / 100).toFixed(2);
             <span class="w-full text-xs text-muted">
               {[r.reason, r.note].filter(Boolean).join(' — ')}
             </span>
-            {/* Only entries minshop invented can be corrected here. A provider's
+            {/* Only entries bookstore invented can be corrected here. A provider's
                 own numbers belong to the provider, so they are reconciled rather
                 than edited. */}
             {(r.kind === 'manual_external' || r.kind === 'demo') &&
@@ -174,7 +174,7 @@ const dollars = (cents: number) => (cents / 100).toFixed(2);
                 <form
                   method="POST"
                   action={`/api/admin/orders/${order.public_id}`}
-                  onsubmit="return confirm('Void this recorded refund? This corrects minshop’s records only and moves no money.')"
+                  onsubmit="return confirm('Void this recorded refund? This corrects bookstore’s records only and moves no money.')"
                 >
                   <input type="hidden" name="_action" value="void_refund" />
                   <input type="hidden" name="refund_id" value={r.public_id} />
@@ -255,7 +255,7 @@ const dollars = (cents: number) => (cents / 100).toFixed(2);
             <p class="text-xs text-muted">
               {isDemo
                 ? 'This only updates the demo order and store statistics. No money was charged or returned.'
-                : 'This only updates minshop’s records and moves no money. Send the refund from your wallet or provider first.'}
+                : 'This only updates bookstore’s records and moves no money. Send the refund from your wallet or provider first.'}
             </p>
           </form>
         )}
