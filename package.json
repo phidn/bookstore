@@ -67,7 +67,7 @@
     "@types/markdown-it": "^14.1.2",
     "miniflare": "^4.20260730.0",
     "tailwindcss": "^4.3.1",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10",
     "wrangler": "^4.118.0"
   },
