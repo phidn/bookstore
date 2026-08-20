@@ -5,9 +5,9 @@
 - **Mục tiêu ưu tiên:** Sẵn sàng cho việc tùy biến giao diện, cấu hình storefront, tích hợp cổng thanh toán và mở rộng các luồng agent autonomous shopping/operating.
 
 ## 2. Active Focus
-- [x] Hoàn thành gần nhất: Chuẩn hóa hệ thống tài liệu (Flat Wiki, ADRs, memory.md, thiết lập đồng bộ 3 CLI CLAUDE.md / GEMINI.md / AGENTS.md).
-- [/] Đang thực hiện: Xác nhận trạng thái onboarding và đồng bộ môi trường.
-- [ ] Việc tiếp theo: Tùy biến storefront theo yêu cầu người dùng hoặc triển khai thêm tính năng / tích hợp.
+- [x] Hoàn thành gần nhất: Squash toàn bộ commit cũ của ddyy thành "init commit", update author/committer thành phidn <phidnhh@gmail.com>, và force push lên phidn/bookstore.
+- [/] Đang thực hiện: Hoàn tất bàn giao và duy trì Active State.
+- [ ] Việc tiếp theo: Tùy biến storefront, giao diện hoặc bổ sung tính năng e-commerce theo yêu cầu.
 
 ## 3. Quick Navigation
 - Tri thức & Hướng dẫn: `docs/wiki/INDEX.md`
