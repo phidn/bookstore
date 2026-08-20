@@ -5,11 +5,12 @@
 - **Mục tiêu ưu tiên:** Sẵn sàng cho việc tùy biến giao diện, cấu hình storefront, tích hợp cổng thanh toán và mở rộng các luồng agent autonomous shopping/operating.
 
 ## 2. Active Focus
-- [x] Hoàn thành gần nhất: Khởi tạo GitHub Issues & Project Board (#1); Cập nhật Task 1 với bộ mã màu thương hiệu **Mocha Mousse** (font `DM Sans`, tông màu cà phê ấm áp / earthy tones):
+- [x] Hoàn thành gần nhất: Khởi tạo GitHub Issues & Project Board (#1); Cập nhật Task 1 với bộ mã màu thương hiệu **Mocha Mousse**; Thêm Task 3 (Demo/Staging data):
   - Issue #3: [Task 1: Tạo Theme Brand Mocha Mousse cho Bookstore (Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/3)
   - Issue #4: [Task 2: Tạo Homepage cho Bookstore (Trang chủ Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/4)
-- [/] Đang thực hiện: Chuẩn bị triển khai Task 1 (Theme Brand Mocha Mousse) và Task 2 (Homepage).
-- [ ] Việc tiếp theo: Thiết kế `tokens.css` (Mocha Mousse palette) và tùy biến các component theme cho Tiểu Viện Hữu Thư.
+  - Issue #5: [Task 3: Tạo trang Demo / Staging cho Bookstore lấy dữ liệu example từ tieuvienhuuthu.store](https://github.com/phidn/bookstore/issues/5)
+- [/] Đang thực hiện: Chuẩn bị triển khai Task 1 (Theme Brand), Task 2 (Homepage) và Task 3 (Demo/Staging Data).
+- [ ] Việc tiếp theo: Thiết kế `tokens.css` (Mocha Mousse palette), thu thập dữ liệu mẫu từ tieuvienhuuthu.store để tạo seed D1.
 
 ## 3. Quick Navigation
 - Tri thức & Hướng dẫn: `docs/wiki/INDEX.md`
