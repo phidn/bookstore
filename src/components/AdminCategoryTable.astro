@@ -1,0 +1,492 @@
+---
+export interface CategoryItem {
+  id: number;
+  public_id: string | null;
+  name: string;
+  slug: string;
+  depth: number;
+  productCount: number;
+  isLinkedNav?: boolean;
+}
+
+interface Props {
+  categories: CategoryItem[];
+}
+
+const { categories } = Astro.props;
+
+// Precompute display data for SSR and client hydration
+const initialData = categories.map((c) => ({
+  ...c,
+  confirmMsg: c.isLinkedNav
+    ? 'This category is linked from your navigation. Deleting it hides that link on the storefront. Sub-categories move up to its parent. Continue?'
+    : 'Delete this category? Sub-categories move up to its parent.',
+}));
+---
+
+<div id="tanstack-category-table-root" class="space-y-4">
+  <!-- Controls Bar (Live Search & Quick Filters) -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-xl border border-line shadow-2xs">
+    <div class="flex flex-1 flex-wrap items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="category-search-input"
+          placeholder="Search categories by name or slug..."
+          class="w-full rounded-lg border border-line bg-paper/50 py-1.5 pl-9 pr-3 text-sm text-ink placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+        />
+      </div>
+
+      <!-- Quick Filter: Product Count -->
+      <select
+        id="category-products-filter"
+        class="rounded-lg border border-line bg-paper/50 px-2.5 py-1.5 text-xs font-medium text-muted focus:border-brand focus:bg-white focus:outline-none"
+      >
+        <option value="all">All categories</option>
+        <option value="has_products">With products (> 0)</option>
+        <option value="empty">Empty categories (0)</option>
+      </select>
+    </div>
+
+    <!-- Match counter -->
+    <div class="text-xs text-muted flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+      <span>Found</span>
+      <span id="category-count-badge" class="font-semibold text-ink">{categories.length}</span>
+      <span>categories</span>
+    </div>
+  </div>
+
+  <!-- Modern Table Container -->
+  <div class="overflow-hidden rounded-xl border border-line bg-white shadow-2xs">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm table-fixed min-w-[680px]" id="admin-tanstack-category-table">
+        <colgroup>
+          <col class="w-[42%]" />
+          <col class="w-[26%]" />
+          <col class="w-[14%]" />
+          <col class="w-[18%]" />
+        </colgroup>
+        <thead class="border-b border-line bg-paper/70 text-xs font-semibold uppercase tracking-wider text-muted select-none">
+          <tr>
+            <th class="py-3.5 px-4 cursor-pointer hover:text-brand transition-colors" data-sort="name">
+              <div class="flex items-center gap-1.5">
+                <span>Category</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="slug">
+              <div class="flex items-center gap-1.5">
+                <span>Slug</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-3 cursor-pointer hover:text-brand transition-colors whitespace-nowrap" data-sort="productCount">
+              <div class="flex items-center gap-1.5">
+                <span>Products</span>
+                <span class="sort-icon text-gray-300 text-2xs">↕</span>
+              </div>
+            </th>
+            <th class="py-3.5 px-4 text-right font-semibold whitespace-nowrap">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="category-table-body" class="divide-y divide-line/70">
+          {
+            initialData.slice(0, 30).map((c) => (
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <!-- Category Name (Hierarchical) -->
+                <td class="py-3 px-4 max-w-0">
+                  <a
+                    href={`/admin/categories/${c.public_id}/edit`}
+                    class="inline-flex items-center gap-1.5 font-medium text-ink group-hover:text-brand truncate max-w-full"
+                    style={`padding-left: ${c.depth * 20}px`}
+                  >
+                    {c.depth > 0 && <span class="text-gray-400 font-normal">↳</span>}
+                    <span class="truncate" title={c.name}>{c.name}</span>
+                  </a>
+                </td>
+
+                <!-- Slug -->
+                <td class="py-3 px-3 text-muted text-xs truncate max-w-0" title={`/categories/${c.slug}`}>
+                  /{c.slug}
+                </td>
+
+                <!-- Products -->
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">
+                  <span class={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ${
+                    c.productCount > 0
+                      ? 'bg-paper text-ink border-line'
+                      : 'bg-gray-50 text-gray-400 border-gray-200'
+                  }`}>
+                    {c.productCount}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center justify-end gap-1.5 text-xs">
+                    <a
+                      href={`/categories/${c.slug}`}
+                      target="_blank"
+                      rel="noopener"
+                      title="View on store"
+                      class="inline-flex items-center rounded-md p-1 text-muted hover:bg-paper hover:text-brand transition-colors"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <a
+                      href={`/admin/categories/${c.public_id}/edit`}
+                      class="inline-flex items-center rounded-md border border-line bg-white px-2.5 py-1 font-medium text-muted hover:border-brand hover:text-brand transition-colors"
+                    >
+                      Edit
+                    </a>
+                    <form
+                      method="POST"
+                      action={`/api/admin/categories/${c.public_id}`}
+                      class="inline-block"
+                      data-confirm={c.confirmMsg}
+                    >
+                      <input type="hidden" name="_action" value="delete" />
+                      <button
+                        type="submit"
+                        class="inline-flex items-center rounded-md border border-transparent px-2 py-1 font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="category-table-empty-state" class={initialData.length === 0 ? 'py-12 text-center text-muted' : 'hidden py-12 text-center text-muted'}>
+      <svg class="mx-auto h-8 w-8 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      <p class="text-sm">No categories found matching the criteria.</p>
+    </div>
+
+    <!-- Table Footer / Pagination Controls -->
+    <div class="flex items-center justify-between border-t border-line bg-paper/40 px-4 py-3 text-xs text-muted">
+      <div class="flex items-center gap-2">
+        <span>Rows per page:</span>
+        <select
+          id="category-page-size-select"
+          class="rounded-md border border-line bg-white px-2 py-1 text-xs text-ink focus:outline-none"
+        >
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span id="category-page-info-label" class="ml-2">Page 1 of {Math.ceil(categories.length / 30) || 1}</span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          id="category-btn-prev-page"
+          disabled
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Previous
+        </button>
+        <button
+          id="category-btn-next-page"
+          disabled={categories.length <= 30}
+          class="rounded-md border border-line bg-white px-2.5 py-1 font-medium text-ink disabled:opacity-40 disabled:cursor-not-allowed hover:bg-paper transition-colors"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hydration Data -->
+<script id="category-tanstack-data" type="application/json" is:inline set:html={JSON.stringify(initialData)} />
+
+<script>
+  import {
+    constructTable,
+    tableFeatures,
+    stockFeatures,
+    createFilteredRowModel,
+    createSortedRowModel,
+    createPaginatedRowModel,
+    type SortingState,
+    type ColumnFiltersState,
+  } from '@tanstack/table-core';
+  import { storeReactivityBindings } from '@tanstack/table-core/store-reactivity-bindings';
+
+  interface CategoryRow {
+    id: number;
+    public_id: string | null;
+    name: string;
+    slug: string;
+    depth: number;
+    productCount: number;
+    isLinkedNav?: boolean;
+    confirmMsg: string;
+  }
+
+  const rawDataElement = document.getElementById('category-tanstack-data');
+  if (rawDataElement) {
+    const rawCategories: CategoryRow[] = JSON.parse(rawDataElement.textContent || '[]');
+
+    let sorting: SortingState = [];
+    let columnFilters: ColumnFiltersState = [];
+    let globalFilter = '';
+    let pagination = {
+      pageIndex: 0,
+      pageSize: 30,
+    };
+
+    const columns = [
+      {
+        accessorKey: 'name',
+        header: 'Category',
+      },
+      {
+        accessorKey: 'slug',
+        header: 'Slug',
+      },
+      {
+        accessorKey: 'productCount',
+        header: 'Products',
+        filterFn: (row: any, _columnId: string, filterValue: string) => {
+          const count = row.original.productCount;
+          if (filterValue === 'has_products') return count > 0;
+          if (filterValue === 'empty') return count === 0;
+          return true;
+        },
+      },
+    ];
+
+    // Initialize TanStack Table instance (v9 API)
+    const table = constructTable({
+      features: tableFeatures({
+        ...stockFeatures,
+        coreReactivityFeature: storeReactivityBindings(),
+        filteredRowModel: createFilteredRowModel(),
+        sortedRowModel: createSortedRowModel(),
+        paginatedRowModel: createPaginatedRowModel(),
+      }),
+      data: rawCategories,
+      columns: columns as any,
+      initialState: {
+        sorting,
+        columnFilters,
+        globalFilter,
+        pagination,
+      },
+      globalFilterFn: (row: any, _columnId: string, filterValue: unknown) => {
+        const query = String(filterValue || '').toLowerCase().trim();
+        if (!query) return true;
+        const name = String(row.original?.name || '').toLowerCase();
+        const slug = String(row.original?.slug || '').toLowerCase();
+        return name.includes(query) || slug.includes(query);
+      },
+    });
+
+    const tbody = document.getElementById('category-table-body');
+    const emptyState = document.getElementById('category-table-empty-state');
+    const countBadge = document.getElementById('category-count-badge');
+    const pageInfoLabel = document.getElementById('category-page-info-label');
+    const btnPrev = document.getElementById('category-btn-prev-page') as HTMLButtonElement | null;
+    const btnNext = document.getElementById('category-btn-next-page') as HTMLButtonElement | null;
+    const pageSizeSelect = document.getElementById('category-page-size-select') as HTMLSelectElement | null;
+    const searchInput = document.getElementById('category-search-input') as HTMLInputElement | null;
+    const productsFilterSelect = document.getElementById('category-products-filter') as HTMLSelectElement | null;
+
+    function render() {
+      if (!tbody) return;
+
+      const rows = table.getPaginatedRowModel().rows;
+      const totalFiltered = table.getFilteredRowModel().rows.length;
+
+      if (countBadge) {
+        countBadge.textContent = String(totalFiltered);
+      }
+
+      if (rows.length === 0) {
+        tbody.innerHTML = '';
+        emptyState?.classList.remove('hidden');
+      } else {
+        emptyState?.classList.add('hidden');
+        tbody.innerHTML = rows
+          .map((row: any) => {
+            const c = row.original;
+            const depthPrefix = c.depth > 0 ? '<span class="text-gray-400 font-normal">↳</span> ' : '';
+            const countClass =
+              c.productCount > 0
+                ? 'bg-paper text-ink border-line'
+                : 'bg-gray-50 text-gray-400 border-gray-200';
+
+            return `
+              <tr class="hover:bg-paper/40 transition-colors group">
+                <td class="py-3 px-4 max-w-0">
+                  <a
+                    href="/admin/categories/${c.public_id}/edit"
+                    class="inline-flex items-center gap-1.5 font-medium text-ink group-hover:text-brand truncate max-w-full"
+                    style="padding-left: ${c.depth * 20}px"
+                  >
+                    ${depthPrefix}
+                    <span class="truncate" title="${c.name}">${c.name}</span>
+                  </a>
+                </td>
+                <td class="py-3 px-3 text-muted text-xs truncate max-w-0" title="/categories/${c.slug}">
+                  /${c.slug}
+                </td>
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ${countClass}">
+                    ${c.productCount}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center justify-end gap-1.5 text-xs">
+                    <a
+                      href="/categories/${c.slug}"
+                      target="_blank"
+                      rel="noopener"
+                      title="View on store"
+                      class="inline-flex items-center rounded-md p-1 text-muted hover:bg-paper hover:text-brand transition-colors"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <a
+                      href="/admin/categories/${c.public_id}/edit"
+                      class="inline-flex items-center rounded-md border border-line bg-white px-2.5 py-1 font-medium text-muted hover:border-brand hover:text-brand transition-colors"
+                    >
+                      Edit
+                    </a>
+                    <form
+                      method="POST"
+                      action="/api/admin/categories/${c.public_id}"
+                      class="inline-block"
+                      data-confirm="${c.confirmMsg}"
+                    >
+                      <input type="hidden" name="_action" value="delete" />
+                      <button
+                        type="submit"
+                        class="inline-flex items-center rounded-md border border-transparent px-2 py-1 font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join('');
+
+        // Wire delete confirmation on dynamically rendered forms
+        tbody.querySelectorAll('form[data-confirm]').forEach((form) => {
+          form.addEventListener('submit', (e) => {
+            const msg = form.getAttribute('data-confirm') || 'Confirm deletion?';
+            if (!confirm(msg)) {
+              e.preventDefault();
+            }
+          });
+        });
+      }
+
+      // Update header sort icons
+      document.querySelectorAll<HTMLElement>('#admin-tanstack-category-table th[data-sort]').forEach((th) => {
+        const sortKey = th.getAttribute('data-sort');
+        const icon = th.querySelector('.sort-icon');
+        const currentSort = sorting.find((s) => s.id === sortKey);
+        if (icon) {
+          if (!currentSort) {
+            icon.textContent = '↕';
+            icon.className = 'sort-icon text-gray-300 text-2xs';
+          } else if (currentSort.desc) {
+            icon.textContent = '↓';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          } else {
+            icon.textContent = '↑';
+            icon.className = 'sort-icon text-brand font-bold text-2xs';
+          }
+        }
+      });
+
+      // Update pagination UI
+      const pageIndex = (table as any).atoms?.pagination?.get()?.pageIndex ?? 0;
+      const pageCount = table.getPageCount() || 1;
+      if (pageInfoLabel) {
+        pageInfoLabel.textContent = `Page ${pageIndex + 1} of ${pageCount}`;
+      }
+      if (btnPrev) btnPrev.disabled = !table.getCanPreviousPage();
+      if (btnNext) btnNext.disabled = !table.getCanNextPage();
+    }
+
+    // Subscribe to store updates
+    (table as any).store?.subscribe(() => {
+      render();
+    });
+
+    // Attach Header Sort Handlers
+    document.querySelectorAll<HTMLElement>('#admin-tanstack-category-table th[data-sort]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const colId = th.getAttribute('data-sort');
+        if (!colId) return;
+
+        const currentSort = sorting.find((s) => s.id === colId);
+        if (!currentSort) {
+          sorting = [{ id: colId, desc: false }];
+        } else if (!currentSort.desc) {
+          sorting = [{ id: colId, desc: true }];
+        } else {
+          sorting = [];
+        }
+
+        table.setSorting(sorting);
+      });
+    });
+
+    // Attach Search Handler with Debounce
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    searchInput?.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const val = (e.target as HTMLInputElement).value;
+        table.setGlobalFilter(val);
+      }, 150);
+    });
+
+    // Attach Filter Select Handlers
+    productsFilterSelect?.addEventListener('change', () => {
+      const val = productsFilterSelect.value;
+      if (val === 'all') {
+        table.setColumnFilters([]);
+      } else {
+        table.setColumnFilters([{ id: 'productCount', value: val }]);
+      }
+    });
+
+    // Attach Pagination Handlers
+    btnPrev?.addEventListener('click', () => table.previousPage());
+    btnNext?.addEventListener('click', () => table.nextPage());
+    pageSizeSelect?.addEventListener('change', (e) => {
+      const newSize = Number((e.target as HTMLSelectElement).value);
+      table.setPageSize(newSize);
+    });
+
+    // Initial render
+    render();
+  }
+</script>
