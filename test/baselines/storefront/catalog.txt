@@ -9,6 +9,9 @@ cache-tag: catalog,shell
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&subset=vietnamese&display=swap">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -38,8 +41,8 @@ cache-tag: catalog,shell
 </head>
 <body class="flex min-h-screen flex-col bg-paper text-ink antialiased">
 <header class="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
-<div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5">
-<a href="/" aria-label="My Shop" class="font-serif text-2xl tracking-tight">
+<div class="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4 sm:gap-6 sm:py-5">
+<a href="/" aria-label="My Shop" class="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-serif text-base tracking-tight sm:text-2xl">
 <span>My Shop</span>
 </a>
 <form method="GET" action="/search" class="ml-auto hidden flex-1 justify-end sm:flex" role="search">
@@ -94,7 +97,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 30" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="eager" fetchpriority="high" decoding="async">
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 30</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.30</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,030</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:60ms">
@@ -103,7 +106,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 29" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 29</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.29</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,029</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:120ms">
@@ -112,7 +115,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 28" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 28</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.28</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,028</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:180ms">
@@ -121,7 +124,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 27" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 27</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.27</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,027</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:240ms">
@@ -130,7 +133,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 26" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 26</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.26</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,026</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:300ms">
@@ -139,7 +142,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 25" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 25</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.25</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,025</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:360ms">
@@ -148,7 +151,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 24" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 24</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.24</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,024</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:420ms">
@@ -157,7 +160,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 23" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 23</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.23</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,023</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -166,7 +169,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 22" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 22</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.22</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,022</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -175,7 +178,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 21" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 21</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.21</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,021</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -184,7 +187,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 20" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 20</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.20</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,020</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -193,7 +196,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 19" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 19</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.19</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,019</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -202,7 +205,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 18" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 18</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.18</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,018</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -211,7 +214,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 17" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 17</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.17</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,017</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -220,7 +223,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 16" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 16</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.16</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,016</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -229,7 +232,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 15" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 15</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.15</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,015</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -238,7 +241,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 14" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 14</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.14</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,014</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -247,7 +250,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 13" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 13</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.13</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,013</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -256,7 +259,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 12" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 12</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.12</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,012</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -265,7 +268,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 11" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 11</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.11</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,011</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -274,7 +277,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 10" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 10</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.10</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,010</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -283,7 +286,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 9" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 9</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.09</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,009</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -292,7 +295,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 8" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 8</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.08</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,008</p>
 </a>
 </li>
 <li class="reveal group" style="animation-delay:480ms">
@@ -301,7 +304,7 @@ cache-tag: catalog,shell
 <img src="/placeholder.png" alt="Pagination Item 7" class="aspect-square w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 </div>
 <h2 class="mt-4 text-sm font-medium tracking-tight">Pagination Item 7</h2>
-<p class="mt-1 text-sm tabular-nums text-muted">$10.07</p>
+<p class="mt-1 text-sm tabular-nums text-muted">₫1,007</p>
 </a>
 </li>
 </ul>
@@ -328,6 +331,6 @@ cache-tag: catalog,shell
 </div>
 </aside>
 </div>
-<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`minshop_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
+<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`bookstore_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
 </body>
 </html>

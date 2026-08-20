@@ -1,17 +1,17 @@
-# minshop
+# bookstore
 
-[![Verify](https://github.com/ddyy/minshop/actions/workflows/verify.yml/badge.svg)](https://github.com/ddyy/minshop/actions/workflows/verify.yml)
-[![npm](https://img.shields.io/npm/v/create-minshop?label=create-minshop)](https://www.npmjs.com/package/create-minshop)
-[![npm downloads](https://img.shields.io/npm/dm/create-minshop)](https://www.npmjs.com/package/create-minshop)
-[![License: MIT](https://img.shields.io/github/license/ddyy/minshop)](LICENSE)
+[![Verify](https://github.com/ddyy/bookstore/actions/workflows/verify.yml/badge.svg)](https://github.com/ddyy/bookstore/actions/workflows/verify.yml)
+[![npm](https://img.shields.io/npm/v/create-bookstore?label=create-bookstore)](https://www.npmjs.com/package/create-bookstore)
+[![npm downloads](https://img.shields.io/npm/dm/create-bookstore)](https://www.npmjs.com/package/create-bookstore)
+[![License: MIT](https://img.shields.io/github/license/ddyy/bookstore)](LICENSE)
 
 An open-source store an agent can pay for itself. Agents read the catalog and pay a Lightning invoice with no human in the loop — over plain JSON or over MCP; people check out the normal way with Stripe. Merchants can run the store over MCP too.
 
 It's a small, server-rendered store for Cloudflare Workers (D1 + R2) with a full admin, multiple payment rails, and an optional MCP server, within the free tier to start. No brand is baked in: store name and time zone are set during onboarding, so it clones cleanly as a template.
 
-**[Live demo](https://demo.minshop.dev/)** (agent API at /api/products, /api/checkout). Uses test payments; do not enter real personal information.
+**[Live demo](https://demo.bookstore.dev/)** (agent API at /api/products, /api/checkout). Uses test payments; do not enter real personal information.
 
-![minshop storefront and checkout](docs/media/minshop.gif)
+![bookstore storefront and checkout](docs/media/bookstore.gif)
 
 <table>
   <tr>
@@ -39,7 +39,7 @@ It's intentionally lightweight and cheap to start. The default deployment uses C
 > **Requires Node ≥ 22.12 and Git.**
 
 ```sh
-npm create minshop@latest my-store
+npm create bookstore@latest my-store
 cd my-store
 npm run provision:local -- --seed
 npm run dev
@@ -124,15 +124,15 @@ stripe listen --forward-to localhost:4321/api/webhook
 stripe trigger checkout.session.completed
 ```
 
-The order shows up in `/admin` (and in D1: `npx wrangler d1 execute minshop-db --local --command "SELECT * FROM orders"`).
+The order shows up in `/admin` (and in D1: `npx wrangler d1 execute bookstore-db --local --command "SELECT * FROM orders"`).
 
 ## Deploy
 
 ### One-click (Deploy to Cloudflare)
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ddyy/minshop)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ddyy/bookstore)
 
-Forks the repo, provisions D1 plus separate R2 buckets for public images (`minshop-images`) and private deliverables (`minshop-files`), applies migrations, and deploys the free-plan default. The files bucket must stay private: never enable r2.dev or attach a custom domain. Then finish onboarding at `/admin/setup` (below). Cloudflare Images, semantic search, and Cloudflare Email are opt-in; their bindings are commented in `wrangler.jsonc`.
+Forks the repo, provisions D1 plus separate R2 buckets for public images (`bookstore-images`) and private deliverables (`bookstore-files`), applies migrations, and deploys the free-plan default. The files bucket must stay private: never enable r2.dev or attach a custom domain. Then finish onboarding at `/admin/setup` (below). Cloudflare Images, semantic search, and Cloudflare Email are opt-in; their bindings are commented in `wrangler.jsonc`.
 
 **Fields the deploy form shows:**
 
@@ -145,7 +145,7 @@ Forks the repo, provisions D1 plus separate R2 buckets for public images (`minsh
 **One shot** — provisions a fresh, fully-independent instance (its own D1, R2, Vectorize index, Worker) and sets both Worker secrets:
 
 ```sh
-npm create minshop@latest my-store
+npm create bookstore@latest my-store
 cd my-store
 npx wrangler login
 npm run provision:cf my-store      # scripts/provision-cf.sh <slug>
@@ -160,9 +160,9 @@ npx wrangler login
 # with no ids (so a one-click / Workers Builds deploy auto-provisions them); for a
 # manual deploy, add the printed database_id to the "DB" entry — or let
 # `wrangler deploy` create it.
-npx wrangler d1 create minshop-db
-npx wrangler r2 bucket create minshop-images
-npx wrangler r2 bucket create minshop-files   # FILES binding; keep private
+npx wrangler d1 create bookstore-db
+npx wrangler r2 bucket create bookstore-images
+npx wrangler r2 bucket create bookstore-files   # FILES binding; keep private
 npm run db:migrate:remote          # applies migrations/ to the production DB
 
 # The only two REQUIRED Worker secrets. The optional cache-purge secret is
@@ -307,14 +307,14 @@ Checkout and the webhook depend on a `PaymentProvider` port (`src/features/payme
 | Rail | What it is | Setup (all in Settings → Payments) |
 |---|---|---|
 | `stripe` *(default)* | Hosted card checkout | paste the secret key + webhook signing secret |
-| `lightning` | Bitcoin Lightning via a **self-hosted** node — minshop mints a BOLT11 invoice and renders its own `/pay` page (QR + `lightning:` link), then confirms settlement | run **phoenixd** or **LNbits** (below); enter its URL + key |
+| `lightning` | Bitcoin Lightning via a **self-hosted** node — bookstore mints a BOLT11 invoice and renders its own `/pay` page (QR + `lightning:` link), then confirms settlement | run **phoenixd** or **LNbits** (below); enter its URL + key |
 | `opennode` | **Hosted** Lightning checkout (custodial processor) — redirect + webhook, like Stripe | paste the OpenNode API key |
 
 Two ports, nested: the outer `PaymentProvider` (stripe / lightning / opennode) and an inner `LightningBackend` (phoenixd / lnbits) shared by the self-rendered flow. Adding another node is one adapter file.
 
-**How settlement is trusted.** Lightning webhooks are treated as an untrusted *nudge* — on receipt minshop **re-polls the node** for the payment (the authority), so a forged webhook can't fake a sale. The `/pay` page also settles on load by polling, so it works even with no public webhook (e.g. local dev). Orders stay "paid-only": unpaid invoices live in a `pending_payments` table, never in `orders`.
+**How settlement is trusted.** Lightning webhooks are treated as an untrusted *nudge* — on receipt bookstore **re-polls the node** for the payment (the authority), so a forged webhook can't fake a sale. The `/pay` page also settles on load by polling, so it works even with no public webhook (e.g. local dev). Orders stay "paid-only": unpaid invoices live in a `pending_payments` table, never in `orders`.
 
-**Shipping (in-app rails).** When shipping is enabled, the Lightning, OpenNode, and Demo carts route through minshop's own `/checkout` page — a server-rendered address + shipping-option step priced from the Admin-managed zones (see [Shipping](#shipping-and-order-email)) — so the invoice total includes shipping and the address + email land on the order, same as Stripe. The Demo rail arrives with a sample address prefilled (it ships nowhere; the step exists to exercise the real rate configuration). Programmatic checkout accepts the same address as a `ship_to` object. (Stripe keeps its own hosted address/shipping collection, unchanged.)
+**Shipping (in-app rails).** When shipping is enabled, the Lightning, OpenNode, and Demo carts route through bookstore's own `/checkout` page — a server-rendered address + shipping-option step priced from the Admin-managed zones (see [Shipping](#shipping-and-order-email)) — so the invoice total includes shipping and the address + email land on the order, same as Stripe. The Demo rail arrives with a sample address prefilled (it ships nowhere; the step exists to exercise the real rate configuration). Programmatic checkout accepts the same address as a `ship_to` object. (Stripe keeps its own hosted address/shipping collection, unchanged.)
 
 **Limitations (Lightning).** **Tax** and promo codes are still Stripe-Checkout features and are skipped on the Lightning path — to charge tax on a non-Stripe rail you'd compute it yourself (e.g. Stripe's Tax *Calculation* API) and add it to the total. No automatic refunds (Lightning can't reverse in place). Invoices are priced in sats from a BTC spot rate fetched at checkout (`payments.lightning.rateUrl`, default Coinbase — no key).
 
@@ -372,7 +372,7 @@ Deliberately **no runtime plugin system** — Workers bundle at build time, so c
 Schema lives in `migrations/` as numbered, additive SQL files (D1 tracks which have run, so deploys only apply new ones). To evolve the schema, add a new file — never edit an applied one:
 
 ```sh
-npx wrangler d1 migrations create minshop-db add_product_sku   # writes migrations/0002_…
+npx wrangler d1 migrations create bookstore-db add_product_sku   # writes migrations/0002_…
 # edit it (ALTER TABLE / CREATE TABLE — additive, no destructive DROP)
 npm run db:migrate            # local
 npm run db:migrate:remote     # production
@@ -405,7 +405,7 @@ Change a value, then `npm run deploy`. Currency uses `Intl.NumberFormat`, so `us
 
 ### Optional upload optimization
 
-The default deployment stores original uploads in R2 and serves them through the Worker. Astro uses its `passthrough` image service, so deploying minshop does **not** automatically provision an `IMAGES` binding.
+The default deployment stores original uploads in R2 and serves them through the Worker. Astro uses its `passthrough` image service, so deploying bookstore does **not** automatically provision an `IMAGES` binding.
 
 To optimize new uploads:
 
@@ -413,7 +413,7 @@ To optimize new uploads:
 2. Run `npm run deploy`.
 3. Enable **Optimize images on upload** in Admin → Settings. Optionally override `images.maxWidth` in `src/store.config.ts`.
 
-[Cloudflare Images transformations](https://developers.cloudflare.com/images/pricing/) are available on Free and Paid plans. The Free plan currently includes 5,000 unique transformations per month; when the binding is missing or a transformation fails, minshop stores the original upload instead. Existing R2 objects are not retroactively transformed by this upload-time option.
+[Cloudflare Images transformations](https://developers.cloudflare.com/images/pricing/) are available on Free and Paid plans. The Free plan currently includes 5,000 unique transformations per month; when the binding is missing or a transformation fails, bookstore stores the original upload instead. Existing R2 objects are not retroactively transformed by this upload-time option.
 
 ### Serving images off the Worker (R2 custom domain)
 
@@ -519,7 +519,7 @@ to someone who hit the URL beforehand.
 > controls to keep, and the checks to run.
 
 
-Minshop ships selectable **themes** — as on other platforms, except a theme here is compiled source selected at build time, not a package installed at runtime. Brand color, accent, font, and corner radius are **design tokens** in your theme's `tokens.css` (`src/themes/<your-theme>/tokens.css`, a Tailwind v4 `@theme` block) — rebrand a clone by editing a few values, no component changes:
+Bookstore ships selectable **themes** — as on other platforms, except a theme here is compiled source selected at build time, not a package installed at runtime. Brand color, accent, font, and corner radius are **design tokens** in your theme's `tokens.css` (`src/themes/<your-theme>/tokens.css`, a Tailwind v4 `@theme` block) — rebrand a clone by editing a few values, no component changes:
 
 ```css
 @theme {
@@ -554,7 +554,7 @@ Product search sits behind a `SearchProvider` seam (`features/search`). Choose t
 
 ```sh
 # 1. Create the index (dimensions must match the model — bge-base = 768)
-wrangler vectorize create minshop-products --dimensions=768 --metric=cosine
+wrangler vectorize create bookstore-products --dimensions=768 --metric=cosine
 # 2. Uncomment the "ai" + "vectorize" bindings in wrangler.jsonc
 # 3. Select semantic search in Admin → Settings → Search
 # 4. Use the Reindex button there to backfill existing products
@@ -597,7 +597,7 @@ In local dev the magic link is also logged to the server console, so you can tes
 }
 ```
 
-The live demo is `https://demo-mcp.minshop.dev/mcp` — the buyer tier is open, so an MCP client can browse and buy from it with no configuration beyond that URL.
+The live demo is `https://demo-mcp.bookstore.dev/mcp` — the buyer tier is open, so an MCP client can browse and buy from it with no configuration beyond that URL.
 
 **Buyer tools:** `browse_products`, `get_product_details`, `payment_methods`, `create_checkout`, `check_order_status`. `create_checkout` returns an `order_status_url` and, on the Lightning rail, a payable BOLT11 invoice — so an agent with a wallet can complete a purchase and poll for its downloads with no human in the loop.
 

@@ -40,9 +40,9 @@ describe('deploy cache purge authentication', () => {
     null,
     '',
     'Bearer token',
-    'MinshopDeploy 123.signature',
-    `MinshopDeploy ${NOW}.${'g'.repeat(64)}`,
-    `MinshopDeploy ${NOW}.${'0'.repeat(63)}`,
+    'BookstoreDeploy 123.signature',
+    `BookstoreDeploy ${NOW}.${'g'.repeat(64)}`,
+    `BookstoreDeploy ${NOW}.${'0'.repeat(63)}`,
   ])('rejects malformed authorization %j', async (authorization) => {
     await expect(
       verifyDeployPurgeAuthorization(authorization, SECRET, NOW),

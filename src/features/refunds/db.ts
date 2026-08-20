@@ -275,7 +275,7 @@ export type ProviderSyncResult =
  * Absolute, not additive: `provider_refunded_cents` becomes
  * MAX(current, incoming). A duplicate webhook, an out-of-order webhook, or a
  * manual sync of a total we already hold is therefore a harmless no-op, and a
- * minshop-initiated refund followed by its own `charge.refunded` counts once.
+ * bookstore-initiated refund followed by its own `charge.refunded` counts once.
  *
  * The ledger records only the DELTA the total advanced by, so refund history
  * sums to the provider component rather than double-counting it.
@@ -394,7 +394,7 @@ export async function syncProviderRefund(
 
 /**
  * Correct a mistaken manual or demo entry. Moves no money — it only undoes
- * minshop bookkeeping, so it is refused for provider-authoritative rows whose
+ * bookstore bookkeeping, so it is refused for provider-authoritative rows whose
  * numbers belong to Stripe rather than to us.
  *
  * `reverses_refund_id` is UNIQUE, so the same entry can never be voided twice:

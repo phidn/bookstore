@@ -24,7 +24,7 @@ const storeName = Astro.locals.settings?.storeName ?? config.storeName;
 const showSetupNudge =
   !Astro.locals.settings?.setupComplete && Astro.url.pathname !== '/admin/setup';
 // Show "Log out" only when a password-login session cookie is present. Under
-// Cloudflare Access or local dev there's no minshop session to clear.
+// Cloudflare Access or local dev there's no bookstore session to clear.
 const showLogout = !!Astro.cookies.get('admin_session')?.value;
 const pageTitle = title ? `${title} — ${storeName} admin` : `${storeName} admin`;
 // Configuration that fails closed blocks checkout for physical orders, and the only

@@ -13,7 +13,7 @@ set -euo pipefail
 #
 # Pass --update to re-capture. Review that diff like source.
 
-state_dir="$(mktemp -d "${TMPDIR:-/tmp}/minshop-storefront-baselines.XXXXXX")"
+state_dir="$(mktemp -d "${TMPDIR:-/tmp}/bookstore-storefront-baselines.XXXXXX")"
 worker_log="$state_dir/worker.log"
 worker_pid=""
 test_port="${STOREFRONT_TEST_PORT:-8792}"

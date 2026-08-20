@@ -1,10 +1,10 @@
 {
-  "name": "create-minshop",
+  "name": "create-bookstore",
   "version": "0.2.0",
-  "description": "Scaffold a Minshop storefront for Cloudflare Workers",
+  "description": "Scaffold a Bookstore storefront for Cloudflare Workers",
   "type": "module",
   "bin": {
-    "create-minshop": "bin/create-minshop.js"
+    "create-bookstore": "bin/create-bookstore.js"
   },
   "files": [
     "bin",
@@ -29,7 +29,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ddyy/minshop.git",
-    "directory": "create-minshop"
+    "directory": "create-bookstore"
   },
   "homepage": "https://github.com/ddyy/minshop#readme",
   "bugs": {

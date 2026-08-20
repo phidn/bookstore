@@ -8,6 +8,9 @@ cache-control: private, no-store
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&subset=vietnamese&display=swap">
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -37,8 +40,8 @@ cache-control: private, no-store
 </head>
 <body class="flex min-h-screen flex-col bg-paper text-ink antialiased">
 <header class="sticky top-0 z-20 border-b border-line bg-paper/85 backdrop-blur">
-<div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-5">
-<a href="/" aria-label="My Shop" class="font-serif text-2xl tracking-tight">
+<div class="mx-auto flex max-w-6xl items-center gap-4 px-6 py-4 sm:gap-6 sm:py-5">
+<a href="/" aria-label="My Shop" class="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-serif text-base tracking-tight sm:text-2xl">
 <span>My Shop</span>
 </a>
 <form method="GET" action="/search" class="ml-auto hidden flex-1 justify-end sm:flex" role="search">
@@ -80,7 +83,7 @@ cache-control: private, no-store
 <img src="/placeholder.png" alt class="h-16 w-16 shrink-0 rounded object-cover" width="600" height="600" loading="lazy" fetchpriority="auto" decoding="async" data-image-fade>
 <span class="min-w-0">
 <span class="block truncate">Pagination Item 2</span>
-<span class="block text-xs tabular-nums text-muted">$10.02 each</span>
+<span class="block text-xs tabular-nums text-muted">₫1,002 each</span>
 </span>
 </a>
 <div class="ml-auto flex items-center gap-4">
@@ -90,7 +93,7 @@ cache-control: private, no-store
 <input type="number" name="qty" min="0" max="99" value="1" aria-label="Quantity" class="w-14 border-b border-line bg-transparent py-1 text-center tabular-nums focus:border-brand focus:outline-none">
 <button type="submit" class="text-xs uppercase tracking-widest text-faint hover:text-brand">Update</button>
 </form>
-<span class="w-20 text-right tabular-nums">$10.02</span>
+<span class="w-20 text-right tabular-nums">₫1,002</span>
 <form method="POST" action="/api/cart" class="flex items-center">
 <input type="hidden" name="_action" value="remove">
 <input type="hidden" name="key" value="prod_<id>">
@@ -103,18 +106,15 @@ cache-control: private, no-store
 <div class="w-full sm:max-w-sm">
 <div class="flex items-center justify-between">
 <span class="text-xs uppercase tracking-widest text-muted">Subtotal</span>
-<span class="text-lg tabular-nums">$10.02</span>
+<span class="text-lg tabular-nums">₫1,002</span>
 </div>
-<form method="POST" action="/api/checkout" class="mt-4 space-y-2">
-<input type="hidden" name="source" value="cart">
-<button type="submit" name="method" value="demo" class="flex w-full items-center justify-between gap-3 rounded-lg px-5 py-3 text-left transition bg-brand text-on-brand hover:bg-brand-hover">
+<a href="/checkout" class="mt-4 flex w-full items-center justify-between gap-3 rounded-lg bg-brand px-5 py-3 text-on-brand transition hover:bg-brand-hover">
 <span>
-<span class="block text-sm font-medium">Demo checkout</span>
-<span class="block text-xs text-on-brand/70">Simulated — places a real test order, no charge</span>
+<span class="block text-sm font-medium">Tiến hành đặt hàng</span>
+<span class="block text-xs text-on-brand/70">Giao nội thành TP.HCM · COD hoặc chuyển khoản</span>
 </span>
-<span aria-hidden="true" class="text-on-brand/80">&rarr;</span>
-</button>
-</form>
+<span aria-hidden="true">&rarr;</span>
+</a>
 </div>
 </div>
 </main>
@@ -135,6 +135,6 @@ cache-control: private, no-store
 </div>
 </aside>
 </div>
-<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`minshop_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
+<script type="module">globalThis.process??={},globalThis.process.env??={};var e=document.querySelector(`[data-cart-drawer]`);if(e instanceof HTMLElement){let t=e.querySelector(`[data-cart-panel]`),n=e.querySelector(`[data-cart-backdrop]`),r=e.querySelector(`[data-cart-body]`),i=document.querySelector(`[data-cart-count-label]`),a=`bookstore_cart_count`,o=e=>{let t=Math.max(0,Number(e)||0);return i&&(i.textContent=t>0?` (${t>99?`99+`:t})`:``),t},s=()=>{let e=document.cookie.match(/(?:^|;\s*)cart_n=(\d+)/);return e?Number(e[1]):0},c=e=>{let t=o(e);try{localStorage.setItem(a,String(t))}catch{}};i&&(o(s()),window.addEventListener(`storage`,e=>{e.key===a&&o(s())}),window.addEventListener(`pageshow`,()=>o(s())));let l=()=>{document.querySelector(`[data-nav-disclosure]`)?.removeAttribute(`open`),e.classList.remove(`invisible`,`pointer-events-none`),requestAnimationFrame(()=>requestAnimationFrame(()=>{t?.classList.remove(`translate-x-full`),n?.classList.remove(`opacity-0`)})),document.body.style.overflow=`hidden`},u=()=>{t?.classList.add(`translate-x-full`),n?.classList.add(`opacity-0`),document.body.style.overflow=``,setTimeout(()=>e.classList.add(`invisible`,`pointer-events-none`),300)},d=async()=>{let e=await fetch(`/partials/cart`,{headers:{"X-Partial":`1`}}).then(e=>e.text());r&&(r.innerHTML=e);let t=r?.querySelector(`[data-cart-count]`);c(t?Number(t.getAttribute(`data-cart-count`)):0)};for(let e of document.querySelectorAll(`[data-cart-open]`))e.addEventListener(`click`,async e=>{e.preventDefault(),await d(),l()});e.querySelector(`[data-cart-close]`)?.addEventListener(`click`,u),n?.addEventListener(`click`,u),document.addEventListener(`keydown`,t=>{t.key===`Escape`&&!e.classList.contains(`invisible`)&&u()}),document.addEventListener(`submit`,async e=>{let t=e.target;t instanceof HTMLFormElement&&(t.getAttribute(`action`)||``)===`/api/cart`&&(t.hasAttribute(`data-fullpage`)||e.submitter instanceof HTMLElement&&e.submitter.hasAttribute(`data-fullpage`)||location.pathname!==`/cart`&&(e.preventDefault(),await fetch(`/api/cart`,{method:`POST`,headers:{"X-Partial":`1`},body:new URLSearchParams(new FormData(t))}),await d(),l()))})}</script>
 </body>
 </html>

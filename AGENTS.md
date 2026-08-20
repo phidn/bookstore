@@ -1,6 +1,6 @@
-# AGENTS.md — working on minshop
+# AGENTS.md — working on bookstore
 
-A guide for contributors and automated tooling making changes to minshop: a
+A guide for contributors and automated tooling making changes to bookstore: a
 small, full-Cloudflare ecommerce store (Astro 7 SSR on Workers + D1 + R2 +
 Stripe / Lightning). Read this before editing. It's the map, the rules, the
 recipes, and the traps.
@@ -200,7 +200,7 @@ To swap/add a provider, write one adapter file + wire the factory:
   `features/payments/lightning/<name>.ts`; add a case to `getLightningBackend()`.
 - **A shipping zone/rate:** edit `shipping.zones` in `config.ts` default (or
   `store.config.ts`). Pure logic lives in `shipping/calculator.ts` — unit-test it.
-- **A migration:** `npx wrangler d1 migrations create minshop-db <name>` → edit →
+- **A migration:** `npx wrangler d1 migrations create bookstore-db <name>` → edit →
   `npm run db:migrate` (local) → `npm run db:migrate:remote` (prod, before deploy).
 - **An admin page:** `src/pages/admin/<x>.astro` using `AdminLayout` (add a nav
   entry there). Mutations go through `/api/admin/*` (covered by the auth gate).

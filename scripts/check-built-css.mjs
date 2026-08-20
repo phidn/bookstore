@@ -145,8 +145,8 @@ const failures = [];
 //    assertions. The markers are emitted by the entries themselves
 //    (src/styles/global.css and admin.css).
 const entryOf = (body) => {
-  const admin = body.includes('--minshop-css-entry:admin');
-  const storefront = body.includes('--minshop-css-entry:storefront');
+  const admin = body.includes('--bookstore-css-entry:admin');
+  const storefront = body.includes('--bookstore-css-entry:storefront');
   if (admin && storefront) return 'both';
   if (admin) return 'admin';
   if (storefront) return 'storefront';

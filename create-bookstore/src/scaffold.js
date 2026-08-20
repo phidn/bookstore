@@ -3,18 +3,18 @@ import { basename, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 export const TEMPLATE_REPOSITORY = 'https://github.com/ddyy/minshop.git';
-export const usage = `Create a new Minshop storefront.
+export const usage = `Create a new Bookstore storefront.
 
 Usage:
-  npm create minshop@latest [directory] [options]
-  npx create-minshop@latest [directory] [options]
+  npm create bookstore@latest [directory] [options]
+  npx create-bookstore@latest [directory] [options]
 
 Options:
   --no-install   Scaffold without installing dependencies
   --ref <ref>    Clone a specific Git branch or tag (default: main)
   --theme <id>   Name this store's theme (default: from the directory)
   -h, --help     Show this help
-  -v, --version  Show the installed create-minshop version
+  -v, --version  Show the installed create-bookstore version
 `;
 
 /** Ids upstream owns. A store may not claim one, or a later upstream release
@@ -71,7 +71,7 @@ export function resolveThemeId(requested, directory) {
       `Cannot derive a theme id from "${directory}". Pass --theme <id> explicitly.`,
     );
   }
-  // A directory literally named `minshop` is the common default, and `default`
+  // A directory literally named `bookstore` is the common default, and `default`
   // is reserved, so suffix rather than fail on a name the user did not choose.
   return RESERVED_THEME_IDS.includes(derived) ? `${derived}-store` : derived;
 }
@@ -86,7 +86,7 @@ export function assertSupportedNodeVersion(version = process.versions.node) {
 
 export function parseArguments(args) {
   const options = {
-    directory: 'minshop',
+    directory: 'bookstore',
     install: true,
     ref: 'main',
     theme: null,
@@ -147,8 +147,8 @@ function shellPath(path) {
   return /\s/.test(path) ? JSON.stringify(path) : path;
 }
 
-export function scaffoldMinshop({
-  directory = 'minshop',
+export function scaffoldBookstore({
+  directory = 'bookstore',
   install = true,
   ref = 'main',
   theme = null,
@@ -175,7 +175,11 @@ export function scaffoldMinshop({
   // A generated storefront should not inherit the template repository history or
   // package-maintainer release machinery.
   rmSync(resolve(target, '.git'), { recursive: true, force: true });
+  rmSync(resolve(target, 'create-bookstore'), { recursive: true, force: true });
   rmSync(resolve(target, 'create-minshop'), { recursive: true, force: true });
+  rmSync(resolve(target, '.github/workflows/publish-create-bookstore.yml'), {
+    force: true,
+  });
   rmSync(resolve(target, '.github/workflows/publish-create-minshop.yml'), {
     force: true,
   });
@@ -213,3 +217,5 @@ export function scaffoldMinshop({
     shellTarget: shellPath(relativeTarget),
   };
 }
+
+export const scaffoldMinshop = scaffoldBookstore;

@@ -35,7 +35,7 @@ const viteCacheDir = process.argv.includes('dev')
 // selection — without this, `deploy --skip-build` happily deploys whatever
 // design happened to be in dist/, and nothing ever knows.
 const themeStamp = {
-  name: 'minshop:theme-stamp',
+  name: 'bookstore:theme-stamp',
   hooks: {
     'astro:build:done': async () => {
       const { writeFileSync, mkdirSync } = await import('node:fs');
@@ -57,7 +57,7 @@ export default defineConfig({
   security: { checkOrigin: false },
   adapter: cloudflare({
     // Keep Cloudflare Images opt-in. The adapter otherwise auto-provisions an
-    // IMAGES binding even though minshop stores and serves originals from R2.
+    // IMAGES binding even though bookstore stores and serves originals from R2.
     imageService: 'passthrough',
     remoteBindings: process.env.REMOTE_BINDINGS === 'true' || process.env.USE_PROD_DATA === 'true' || process.env.PROD_API === 'true',
   }),

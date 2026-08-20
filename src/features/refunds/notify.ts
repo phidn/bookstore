@@ -13,7 +13,7 @@ import { getSetting } from '../settings/db';
  * Shared by every path that can advance a refund total — the provider webhook,
  * the admin actions, and the reconciliation retry — because "who sends the
  * email" is precisely the thing that goes wrong when each path keeps its own
- * copy: a minshop-initiated refund whose webhook is a deliberate no-op, or a
+ * copy: a bookstore-initiated refund whose webhook is a deliberate no-op, or a
  * retry that finally applies a refund, must still mail exactly once.
  *
  * Rules, in one place:

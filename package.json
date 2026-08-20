@@ -1,5 +1,5 @@
 {
-  "name": "minshop",
+  "name": "bookstore",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -35,7 +35,7 @@
     "mcp:dev": "wrangler dev --config mcp/wrangler.jsonc --persist-to .wrangler/state",
     "mcp:deploy": "wrangler deploy --config mcp/wrangler.jsonc",
     "mcp:check": "bash scripts/check-mcp.sh",
-    "scaffold:check": "npm test --prefix create-minshop && npm pack ./create-minshop --dry-run",
+    "scaffold:check": "npm test --prefix create-bookstore && npm pack ./create-bookstore --dry-run",
     "theme:sync": "node scripts/theme-sync.mjs",
     "db:seed:storefront-states": "bash scripts/seed-storefront-states.sh"
   },

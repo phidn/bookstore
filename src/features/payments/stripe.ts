@@ -262,15 +262,15 @@ export function createStripeProvider(
           },
         };
       }
-      // A refund made anywhere — Stripe Dashboard, the API, or minshop's own
+      // A refund made anywhere — Stripe Dashboard, the API, or bookstore's own
       // button. `amount_refunded` is the charge's CUMULATIVE refunded total, so
       // it is reported as-is and reconciled absolutely: a replayed or
-      // out-of-order event then changes nothing, and minshop's own refund plus
+      // out-of-order event then changes nothing, and bookstore's own refund plus
       // the webhook it triggers count once between them.
       //
       // Scope: Stripe Checkout with ordinary automatic capture produces at most
       // one successful charge per PaymentIntent, so this charge's total is the
-      // payment's total. If minshop ever supports multi-capture flows, this must
+      // payment's total. If bookstore ever supports multi-capture flows, this must
       // become a sum over stripe.refunds.list({ payment_intent }) instead.
       if (event.type === 'charge.refunded') {
         const charge = event.data.object;
@@ -306,7 +306,7 @@ export function createStripeProvider(
       await stripe.refunds.create({ payment_intent: pi });
     },
 
-    // Orders settled before minshop stored the PaymentIntent have only a
+    // Orders settled before bookstore stored the PaymentIntent have only a
     // session id, so a charge.refunded naming that payment can't find them.
     // Stripe can map one to the other, which is what makes those historical
     // orders reconcilable instead of needing a hand-edit of the database.

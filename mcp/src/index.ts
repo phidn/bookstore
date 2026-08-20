@@ -176,7 +176,7 @@ const NUMERIC_ORDER_ERROR =
   'Numeric row IDs are not accepted. Pass the ord_… public ID (or a legacy order public ID).';
 
 /**
- * minshop MCP server — lets an assistant operate the store (read orders/products,
+ * Bookstore MCP server — lets an assistant operate the store (read orders/products,
  * create/update products, fulfill orders) over the same D1 the storefront uses.
  * Stateless tools; the McpAgent Durable Object only holds the MCP session.
  *
@@ -193,7 +193,7 @@ export interface SessionProps extends Record<string, unknown> {
 }
 
 export class StoreMcp extends McpAgent<Env, Record<string, never>, SessionProps> {
-  server = new McpServer({ name: 'minshop', version: '2.0.0' });
+  server = new McpServer({ name: 'bookstore', version: '2.0.0' });
   initialState = {};
 
   /**
@@ -565,7 +565,7 @@ export default {
     }
 
     return new Response(
-      'minshop MCP server — POST /mcp (streamable HTTP). Browse and checkout need no ' +
+      'bookstore MCP server — POST /mcp (streamable HTTP). Browse and checkout need no ' +
         'auth; operator tools need Authorization: Bearer <MCP_TOKEN>.',
       { status: 404 },
     );

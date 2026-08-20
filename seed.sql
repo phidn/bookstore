@@ -1,6 +1,6 @@
 -- Local dev seed data (not run by migrations). Re-runnable: each insert is a
 -- no-op if a product with that name already exists.
---   wrangler d1 execute minshop-db --local --file=./seed.sql   (or: npm run db:seed)
+--   wrangler d1 execute bookstore-db --local --file=./seed.sql   (or: npm run db:seed)
 
 INSERT INTO products (name, slug, description, price_cents, stock)
 SELECT 'Sample Tee', 'sample-tee', 'A comfy cotton t-shirt.', 2500, 100

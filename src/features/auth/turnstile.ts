@@ -1,6 +1,6 @@
 /**
- * Cloudflare Turnstile server-side verification. minshop is itself a Worker, so we
- * verify the token directly in our own routes (browser → minshop Worker →
+ * Cloudflare Turnstile server-side verification. bookstore is itself a Worker, so we
+ * verify the token directly in our own routes (browser → bookstore Worker →
  * siteverify) — no separate siteverify Worker. Pure + dependency-free (takes the
  * secret as a param, no `cloudflare:workers` import) so it's unit-testable.
  *

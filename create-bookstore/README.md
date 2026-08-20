@@ -1,9 +1,9 @@
-# create-minshop
+# create-bookstore
 
-Scaffold a fresh [Minshop](https://github.com/ddyy/minshop) storefront:
+Scaffold a fresh Bookstore storefront:
 
 ```sh
-npm create minshop@latest my-store
+npm create bookstore@latest my-store
 cd my-store
 npm run provision:local -- --seed
 npm run dev
@@ -37,13 +37,13 @@ npm run provision:cf my-store
 The first release must be published interactively so the package exists on npm:
 
 ```sh
-cd create-minshop
+cd create-bookstore
 npm login
 npm run check
 npm publish
 ```
 
-After that, configure npm trusted publishing for the `ddyy/minshop` GitHub
-repository and the `publish-create-minshop.yml` workflow, with `npm publish`
+After that, configure npm trusted publishing for the GitHub
+repository and the `publish-create-bookstore.yml` workflow, with `npm publish`
 allowed. Future releases are published by bumping this package version and
 publishing a matching GitHub release such as `v0.1.1`.

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Clean-room D1 integration gate: use an isolated Miniflare state directory so
 # neither a developer's normal local database nor production can be touched.
-state_dir="$(mktemp -d "${TMPDIR:-/tmp}/minshop-d1-integration.XXXXXX")"
+state_dir="$(mktemp -d "${TMPDIR:-/tmp}/bookstore-d1-integration.XXXXXX")"
 worker_log="$state_dir/worker.log"
 worker_pid=""
 test_port="${D1_TEST_PORT:-8791}"
@@ -291,7 +291,7 @@ deploy_purge_status="$(curl --max-time 30 --silent --output /dev/null \
   --write-out '%{http_code}' \
   --request POST \
   --header 'content-type: application/json' \
-  --header 'authorization: MinshopDeploy invalid' \
+  --header 'authorization: BookstoreDeploy invalid' \
   --data '{}' \
   "http://127.0.0.1:$test_port/api/internal/cache-purge")"
 if [[ "$deploy_purge_status" != "401" ]]; then

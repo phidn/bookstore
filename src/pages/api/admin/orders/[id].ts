@@ -196,7 +196,7 @@ export const POST: APIRoute = async ({ request, params, redirect }) => {
       cumulativeRefundedCents: order.amount_total_cents,
       provider: order.payment_method ?? 'stripe',
       idempotencyKey: `admin:provider-refund:${id}:${order.amount_total_cents}`,
-      reason: reason ?? 'Full refund issued from minshop',
+      reason: reason ?? 'Full refund issued from bookstore',
       createdBy: admin,
     });
     // Precisely because that webhook is a no-op, it will not mail the customer

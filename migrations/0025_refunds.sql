@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS refunds (
   public_id           TEXT    NOT NULL UNIQUE,
   order_id            INTEGER NOT NULL REFERENCES orders(id),
 
-  -- provider_api      minshop called the provider's refund API
+  -- provider_api      bookstore called the provider's refund API
   -- provider_sync     provider told us a total we didn't have (webhook/manual sync)
   -- manual_external   money returned outside the provider, recorded by hand
   -- manual_reversal   corrects a mistaken manual/demo entry; moves no money

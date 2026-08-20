@@ -41,12 +41,12 @@ describe('orderNotificationEmail', () => {
       order(),
       [],
       'owner@example.com',
-      'https://demo.minshop.dev',
-      'Minshop',
+      'https://demo.bookstore.dev',
+      'Bookstore',
     );
 
     // ASCII hyphen: keeps the header out of RFC 2047 encoded-words in raw logs.
-    expect(message.subject).toBe('New Minshop order #105 - ord_zdpyy315je');
+    expect(message.subject).toBe('New Bookstore order #105 - ord_zdpyy315je');
     for (const body of [message.text, message.html]) {
       expect(body.toLowerCase()).toContain('order #105');
       expect(body).toContain('ord_zdpyy315je');
@@ -59,11 +59,11 @@ describe('orderNotificationEmail', () => {
       order({ public_id: null }),
       [],
       'owner@example.com',
-      'https://demo.minshop.dev',
-      'Minshop',
+      'https://demo.bookstore.dev',
+      'Bookstore',
     );
 
-    expect(message.subject).toBe('New Minshop order #105');
+    expect(message.subject).toBe('New Bookstore order #105');
     expect(message.text).toContain('Public ID: —');
     expect(message.html).not.toContain('null');
   });
