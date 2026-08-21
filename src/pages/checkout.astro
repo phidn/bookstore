@@ -24,6 +24,7 @@ import {
 } from '../features/orders/reservations';
 import { reservationItems } from '../features/orders/reservationItems';
 import { recordPaidOrder } from '../features/orders/db';
+import { deliverOrderNotifications, sweepStaleNotifications } from '../features/email/outbox';
 import { purgeStockProductCache } from '../features/cache/purge';
 import {
   isLocalPaymentMethod,
@@ -168,6 +169,15 @@ if (isPost) {
           purgeStockProductCache,
         );
         if (!orderId) throw new Error('Không thể ghi nhận đơn hàng.');
+
+        try {
+          const origin = Astro.url.origin;
+          await deliverOrderNotifications(env.DB, orderId, origin);
+          await sweepStaleNotifications(env.DB, origin);
+        } catch (deliveryError) {
+          console.error('Order notification delivery failed:', deliveryError);
+        }
+
         return Astro.redirect(`/order/${accessToken}`, 303);
       } catch (error) {
         await releaseInventoryReservation(env.DB, publicId, purgeStockProductCache);

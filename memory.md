@@ -5,7 +5,9 @@
 - **Mục tiêu ưu tiên:** Sẵn sàng cho việc tùy biến giao diện, cấu hình storefront, tích hợp cổng thanh toán và mở rộng các luồng agent autonomous shopping/operating.
 
 ## 2. Active Focus
-- [x] Hoàn thành gần nhất: Khởi tạo GitHub Issues & Project Board (#1); Cập nhật Task 1 với bộ mã màu thương hiệu **Mocha Mousse**; Thêm Task 3 (Demo/Staging data):
+- [x] Hoàn thành gần nhất:
+  - Khởi tạo GitHub Issues & Project Board (#1); Cập nhật Task 1 (Mocha Mousse), Task 2 (Homepage), Task 3 (Demo/Staging data).
+  - Vẽ lại toàn bộ sơ đồ kiến trúc hệ thống (Mermaid diagrams: Edge Topology, Ports & Adapters, Order/Settlement Sequence, Dual-Layer Config, Agent Commerce, Database ERD) vào [system-overview.md](docs/wiki/system-overview.md).
   - Issue #3: [Task 1: Tạo Theme Brand Mocha Mousse cho Bookstore (Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/3)
   - Issue #4: [Task 2: Tạo Homepage cho Bookstore (Trang chủ Tiểu Viện Hữu Thư)](https://github.com/phidn/bookstore/issues/4)
   - Issue #5: [Task 3: Tạo trang Demo / Staging cho Bookstore lấy dữ liệu example từ tieuvienhuuthu.store](https://github.com/phidn/bookstore/issues/5)
