@@ -368,7 +368,7 @@ INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, posit
 SELECT 'footer', 'page', p.id, p.title, 2 FROM pages p WHERE p.slug = 'shipping-policy';
 
 -- ── 7. Fixture Normalization (public_id & book covers) ────────────────────────
-UPDATE products         SET image_key = '/covers/' || slug || '.svg';
+UPDATE products         SET image_key = '/covers/' || slug || '.jpg';
 UPDATE products         SET public_id = 'prod_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;
 UPDATE categories       SET public_id = 'cat_'  || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;
 UPDATE pages            SET public_id = 'page_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;
