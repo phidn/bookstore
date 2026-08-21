@@ -40,11 +40,9 @@ const { model } = Astro.props;
       >
         {
           model.logo ? (
-            <span class="h-10 w-10 shrink-0 overflow-hidden rounded-full">
-              <img src={model.logo.src} alt={model.logo.alt} class="h-full w-full scale-[1.35] object-cover" />
-            </span>
+            <img src={model.logo.src} alt={model.logo.alt} class="h-10 w-10 shrink-0 object-contain" />
           ) : (
-            <img src="/brand/logo-mark-dark.svg" alt="" aria-hidden="true" class="h-10 w-10" />
+            <img src="/brand/logo-mark-dark.svg" alt="" aria-hidden="true" class="h-10 w-10 shrink-0 object-contain" />
           )
         }
         <span>{model.storeName}</span>
