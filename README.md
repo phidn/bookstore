@@ -4,37 +4,17 @@ Hệ thống cửa hàng sách trực tuyến hiện đại, tối giản và t�
 
 ---
 
-## 📸 Giao diện hệ thống
+## 📸 Screenshots & Preview
 
-### 1. Cửa hàng trực tuyến (Storefront)
-Giao diện trực quan, tinh gọn giúp độc giả dễ dàng duyệt danh mục, tìm kiếm và chọn sách.
-
-![Tiểu Viện Hữu Thư Storefront](docs/media/storefront.png)
-
----
-
-### 2. Đặt hàng & Thanh toán (Checkout)
-Quy trình đặt hàng tinh gọn, hỗ trợ phương thức thanh toán linh hoạt:
-- **COD (Thanh toán khi nhận hàng)**
-- **Chuyển khoản trực tiếp** (hiển thị hướng dẫn chuyển khoản)
-
-![Checkout & Payment](docs/media/checkout.png)
-
----
-
-### 3. Trang quản trị (Admin Portal)
-Hệ thống quản trị mạnh mẽ, mượt mà được xây dựng hoàn toàn với **shadcn/ui** và **Tailwind CSS**.
-
-![Admin Portal](docs/media/admin.png)
-
----
-
-### 4. Thông báo tự động & Bảo mật (Telegram & Bot Protection)
-- **Telegram Bot**: Nhận thông báo tức thì khi có đơn hàng mới về group hoặc topic.
-- **Email Notifications**: Gửi xác nhận đơn hàng qua Resend hoặc Cloudflare Email.
-- **Cloudflare Turnstile**: Tích hợp mã bảo vệ chống bot thông minh cho trang đăng nhập Admin.
-
-![Telegram Bot & Turnstile Settings](docs/media/telegram-turnstile.png)
+| **Storefront (Catalog & Search)** | **Checkout & Payment Flow** |
+| :---: | :---: |
+| ![Storefront](docs/media/storefront.png) | ![Checkout](docs/media/checkout.png) |
+| *Modern, responsive catalog with full-text search* | *Frictionless checkout supporting COD & Bank Transfer* |
+| **Admin Management Portal** | **Telegram Bot & Turnstile Settings** |
+| ![Admin Portal](docs/media/admin.png) | ![Telegram & Turnstile Settings](docs/media/telegram-turnstile.png) |
+| *Comprehensive book, stock & order management* | *Cloudflare Turnstile CAPTCHA & Telegram Bot configuration* |
+| **Telegram Order Notifications** | **Real-Time Alert Features** |
+| ![Telegram Order Notification](docs/media/telegram-notification.png) | • **Instant Alerts**: Real-time push notification for every new order<br>• **Order Breakdown**: Total price, items, quantity & customer email<br>• **Direct Action Link**: One-click jump to order details in Admin<br>• **Topic Support**: Flexible routing to Telegram supergroups & forum topics |
 
 ---
 
