@@ -76,7 +76,8 @@ describe('the store-owned header', () => {
     const html = await render(Header, buildShellModel(input()));
 
     expect(html).toContain('My Shop');
-    expect(html).not.toContain('<img');
+    expect(html).toContain('src="/brand/logo-mark-dark.svg"');
+    expect(html).toContain('aria-hidden="true"');
   });
 
   it('renders a logo image when one is set', async () => {

@@ -16,8 +16,8 @@ const error = Astro.url.searchParams.get('error');
 const shopHref = catalogPath(Astro.locals.settings?.homePage);
 ---
 
-<Layout title="Cart">
-  <h1 class="mb-10 font-serif text-4xl tracking-tight">Your cart</h1>
+<Layout title="Giỏ sách">
+  <h1 class="mb-10 font-serif text-4xl tracking-tight">Giỏ sách của bạn</h1>
 
   {
     error && (
@@ -30,9 +30,9 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
   {
     lines.length === 0 ? (
       <p class="text-muted">
-        Your cart is empty.{' '}
+        Giỏ sách đang trống.{' '}
         <a href={shopHref} class="border-b border-brand text-brand">
-          Continue shopping
+          Tiếp tục chọn sách
         </a>
         .
       </p>
@@ -64,15 +64,15 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
                     </span>
                   )}
                   <span class="block text-xs tabular-nums text-muted">
-                    {formatPrice(l.unitPriceCents)} each
+                    {formatPrice(l.unitPriceCents)} / cuốn
                   </span>
                   {l.availableStock <= 0 ? (
                     <span class="mt-1 block text-xs uppercase tracking-widest text-red-600">
-                      Out of stock
+                      Đã hết hàng
                     </span>
                   ) : l.qty > l.availableStock ? (
                     <span class="mt-1 block text-xs text-amber-700">
-                      Only {l.availableStock} available
+                      Chỉ còn {l.availableStock} cuốn
                     </span>
                   ) : null}
                 </span>
@@ -88,14 +88,14 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
                     min="0"
                     max="99"
                     value={l.qty}
-                    aria-label="Quantity"
+                    aria-label="Số lượng"
                     class="w-14 border-b border-line bg-transparent py-1 text-center tabular-nums focus:border-brand focus:outline-none"
                   />
                   <button
                     type="submit"
                     class="text-xs uppercase tracking-widest text-faint hover:text-brand"
                   >
-                    Update
+                    Cập nhật
                   </button>
                 </form>
                 <span class="w-20 text-right tabular-nums">{formatPrice(l.lineTotalCents)}</span>
@@ -104,10 +104,10 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
                   <input type="hidden" name="key" value={l.key} />
                   <button
                     type="submit"
-                    aria-label="Remove"
+                  aria-label="Xóa khỏi giỏ"
                     class="text-xs uppercase tracking-widest text-faint hover:text-red-600"
                   >
-                    Remove
+                    Xóa
                   </button>
                 </form>
               </div>
@@ -120,7 +120,7 @@ const shopHref = catalogPath(Astro.locals.settings?.homePage);
         <div class="mt-10 flex justify-end">
           <div class="w-full sm:max-w-sm">
             <div class="flex items-center justify-between">
-              <span class="text-xs uppercase tracking-widest text-muted">Subtotal</span>
+              <span class="text-xs uppercase tracking-widest text-muted">Tạm tính</span>
               <span class="text-lg tabular-nums">{formatPrice(subtotalCents)}</span>
             </div>
 

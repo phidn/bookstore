@@ -84,7 +84,7 @@ export function AppSidebar({
               className="hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
             >
               <img
-                src="/logo.png"
+                src="/brand/avatar-light.svg"
                 alt={storeName}
                 className="size-8 rounded-lg object-contain bg-surface border border-sidebar-border/70 p-0.5 shrink-0"
               />

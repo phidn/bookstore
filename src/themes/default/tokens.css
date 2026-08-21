@@ -60,9 +60,15 @@
  */
 /* Page container. The default is a centred editorial column. */
 :root {
-  --page-max: 72rem;
-  --page-pad-x: 1.5rem;
+  --page-max: 96rem;
+  --page-pad-x: 1.25rem;
   --page-pad-y: 3rem;
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --page-pad-x: 2rem;
+  }
 }
 
 :root {

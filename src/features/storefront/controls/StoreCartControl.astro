@@ -13,17 +13,36 @@
 interface Props {
   href: string;
   class?: string;
+  label?: string;
+  showIcon?: boolean;
+  countClass?: string;
 }
 
-const { href, class: className = 'inline-flex items-center hover:text-brand' } = Astro.props;
+const {
+  href,
+  class: className = 'inline-flex items-center hover:text-brand',
+  label = 'Cart',
+  showIcon = false,
+  countClass = 'inline-block min-w-[4ch] tabular-nums',
+} = Astro.props;
 ---
 
 <a href={href} data-cart-open class={className}>
-  Cart
-  <span
-    data-cart-count-label
-    class="inline-block min-w-[4ch] tabular-nums"
-    aria-live="polite"
-    aria-atomic="true"
-  />
+  {
+    showIcon && (
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6 shrink-0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 8h14l-1 12H6L5 8Z" />
+        <path d="M9 9V6a3 3 0 0 1 6 0v3" />
+      </svg>
+    )
+  }
+  <span>
+    {label}
+    <span
+      data-cart-count-label
+      class={countClass}
+      aria-live="polite"
+      aria-atomic="true"
+    />
+  </span>
 </a>

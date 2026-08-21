@@ -17,10 +17,15 @@ const {
   class: className =
     'mb-8 flex flex-wrap items-baseline gap-x-5 gap-y-1 text-xs uppercase tracking-widest text-muted',
 } = Astro.props;
+const vietnameseLabel: Record<string, string> = {
+  Newest: 'Mới nhất',
+  Price: 'Giá',
+  Name: 'Tên sách',
+};
 ---
 
 <div class={className}>
-  <span>Sort</span>
+  <span>Sắp xếp</span>
   {
     model.options.map((option) => (
       <a
@@ -28,7 +33,7 @@ const {
         aria-current={option.current ? 'true' : undefined}
         class={`hover:text-brand ${option.current ? 'text-brand' : ''}`}
       >
-        {option.label}
+        {vietnameseLabel[option.label] ?? option.label}
         {option.direction === 'asc' ? ' ↑' : option.direction === 'desc' ? ' ↓' : ''}
       </a>
     ))

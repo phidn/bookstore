@@ -16,6 +16,7 @@ Chào mừng bạn đến với hệ thống tri thức (Flat LLM-Wiki) của d�
 
 ### 3. Tính năng & Giao diện (Storefront & Features)
 - [Storefront Customization Guide](storefront-customization.md): Thang tùy biến (Customization ladder), theme tokens, hợp đồng ProductCard / Header, và Markdown pages.
+- [Bộ logo Tiểu Viện Hữu Thư](brand-logo-assets.md): Logo light/dark, avatar, favicon, màu chuẩn và quy tắc sử dụng.
 - [Payments & Settlements](payments-and-settlements.md): Cơ chế thanh toán đa kênh (Stripe, Lightning phoenixd/lnbits, OpenNode, Demo), xử lý polling và settlement.
 
 ### 4. Agent & Tích hợp (AI Agent & Autonomous Commerce)

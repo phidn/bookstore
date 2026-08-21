@@ -122,7 +122,7 @@ describe('productImageSources', () => {
           baseUrl: 'https://images.example.com',
           delivery: 'cloudflare',
         }),
-      ).toEqual({ src: `https://images.example.com/${key}` });
+      ).toEqual({ src: productImageUrl(key, 'https://images.example.com') });
     }
   });
 

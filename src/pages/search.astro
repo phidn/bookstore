@@ -68,11 +68,11 @@ const cards = products.map((product, i) =>
 const fillerCards = fillers.map((product) => buildProductCard(product, cardOptions));
 ---
 
-<Layout title={q ? `Search: ${q}` : 'Search'}>
+<Layout title={q ? `Tìm kiếm: ${q}` : 'Tìm kiếm'}>
   <div class="mb-8">
-    <p class="text-xs uppercase tracking-[0.25em] text-muted">Search</p>
+    <p class="text-xs uppercase tracking-[0.25em] text-muted">Tìm sách</p>
     <h1 class="mt-2 font-serif text-4xl tracking-tight sm:text-5xl">
-      {q ? q : 'Find something'}
+      {q ? q : 'Bạn đang tìm cuốn nào?'}
     </h1>
   </div>
 
@@ -81,7 +81,7 @@ const fillerCards = fillers.map((product) => buildProductCard(product, cardOptio
       type="search"
       name="q"
       value={q}
-      placeholder="Search products…"
+      placeholder="Tên sách, tác giả hoặc ISBN…"
       aria-label="Search products"
       autofocus={!q}
       class="w-full border-0 border-b border-line bg-transparent px-1 py-2 text-base transition-colors focus:border-brand focus:outline-none"
@@ -92,19 +92,19 @@ const fillerCards = fillers.map((product) => buildProductCard(product, cardOptio
     q &&
       (autoCorrected ? (
         <p class="mb-8 text-sm text-muted">
-          No matches for “{q}” — showing results for{' '}
+          Không tìm thấy “{q}” — đang hiển thị kết quả cho{' '}
           <strong class="font-medium text-ink">{suggestion}</strong>.
         </p>
       ) : products.length > 0 ? (
         <p class="mb-8 text-xs uppercase tracking-widest text-muted">
-          {total} result{total === 1 ? '' : 's'} for “{q}”
+          {total} kết quả cho “{q}”
         </p>
       ) : null)
   }
 
   {
     products.length > 0 && (
-      <ul class="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-3">
+      <ul class="grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {cards.map((card, i) => (
           <ProductCard card={card} index={i} />
         ))}
@@ -116,9 +116,9 @@ const fillerCards = fillers.map((product) => buildProductCard(product, cardOptio
     fillers.length > 0 && (
       <>
         <p class="mb-8 mt-16 text-xs uppercase tracking-widest text-muted">
-          More from these categories
+          Có thể bạn cũng quan tâm
         </p>
-        <ul class="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-3">
+        <ul class="grid grid-cols-2 gap-x-5 gap-y-12 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {fillerCards.map((card, i) => (
             <ProductCard card={card} index={i} />
           ))}
@@ -129,7 +129,7 @@ const fillerCards = fillers.map((product) => buildProductCard(product, cardOptio
 
   {
     q && products.length === 0 && (
-      <p class="text-muted">No products match “{q}”. Try a different word.</p>
+      <p class="text-muted">Chưa tìm thấy sách phù hợp với “{q}”. Hãy thử một từ khóa khác.</p>
     )
   }
 

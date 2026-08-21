@@ -1,7 +1,9 @@
 ---
 import { env } from 'cloudflare:workers';
 import Layout from '../layouts/Layout.astro';
-import ProductList from '../features/products/ProductList.astro';
+import HomePage from '#theme/HomePage.astro';
+import { loadCatalogPage } from '../features/storefront/catalog';
+import { getConfig } from '../config';
 import { resolveHomePath } from '../features/settings/home';
 
 // A store can point `/` at a page or a single product instead of the catalog.
@@ -12,11 +14,36 @@ import { resolveHomePath } from '../features/settings/home';
 // through to the catalog: a 404 homepage would be edge-cached for everyone.
 const homePath = await resolveHomePath(env.DB, Astro.locals.settings?.homePage);
 if (homePath) return Astro.rewrite(homePath);
+
+const config = getConfig();
+const environment = config.environment;
+const envTag =
+  environment === 'production'
+    ? null
+    : environment === 'staging'
+      ? 'STAGING'
+      : environment === 'demo'
+        ? 'DEMO'
+        : 'LOCAL';
+const catalog = await loadCatalogPage(env.DB, {
+  base: '/products',
+  searchParams: new URLSearchParams(),
+  responseHeaders: Astro.response.headers,
+  imageBaseUrl: config.images.baseUrl,
+  currency: config.currency,
+  delivery: Astro.locals.settings?.imageDelivery,
+  eyebrow: 'Sách',
+  heading: 'Sách tuyển chọn',
+  envTag,
+});
 ---
 
 <Layout
   description="Tiểu Viện Hữu Thư — Một tiểu viện nhỏ có nhiều chuyện để nói với nhau nghe. Tiểu viện có bán sách cũ."
   image="/og-image.jpg"
 >
-  <ProductList />
+  <HomePage
+    featuredBooks={catalog.products.slice(0, 6)}
+    storeName={Astro.locals.settings?.storeName ?? config.storeName}
+  />
 </Layout>
