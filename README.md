@@ -2,8 +2,7 @@
 
 A modern, minimalist, and high-performance online bookstore platform. Built on **Astro (SSR)**, powered by **Cloudflare Workers (D1, R2, KV)**, and styled with **shadcn/ui** and **Tailwind CSS v4**.
 
-🔗 **Live Demo**: [https://bookstore-demo.phidang.work](https://bookstore-demo.phidang.work)  
-🏪 **Production Store**: [https://tieuvienhuuthu.store](https://tieuvienhuuthu.store)
+🔗 **Live Demo**: [https://bookstore-demo.phidang.work](https://bookstore-demo.phidang.work)
 
 ---
 
