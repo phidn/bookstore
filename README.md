@@ -1,6 +1,6 @@
 # 📚 Tiểu Viện Hữu Thư — Bookstore
 
-Hệ thống cửa hàng sách trực tuyến hiện đại, tối giản và tối ưu hiệu năng. Được xây dựng trên nền tảng **Astro (SSR)** kết hợp **Cloudflare Workers (D1, R2, KV)** và giao diện quản trị **shadcn/ui**.
+A modern, minimalist, and high-performance online bookstore platform. Built on **Astro (SSR)**, powered by **Cloudflare Workers (D1, R2, KV)**, and styled with **shadcn/ui** and **Tailwind CSS v4**.
 
 ---
 
@@ -18,78 +18,82 @@ Hệ thống cửa hàng sách trực tuyến hiện đại, tối giản và t�
 
 ---
 
-## ✨ Tính năng nổi bật
+## ✨ Key Features
 
-- **⚡ Trải nghiệm đọc & mua sách mượt mà**: Server-rendered (SSR), tải trang tức thì, hỗ trợ responsive hoàn hảo trên mọi thiết bị.
-- **🏷️ Danh mục & Tìm kiếm thông minh**: Phân loại theo nhiều danh mục (Kinh doanh, Khoa học, Tâm lý, Triết học...), sắp xếp theo giá / tên / mới nhất, tìm kiếm Full-Text (FTS5).
-- **🛒 Giỏ hàng & Thanh toán linh hoạt**: Giỏ hàng lưu trữ an toàn, hỗ trợ đặt hàng COD và Chuyển khoản ngân hàng trực tiếp.
-- **📦 Quản lý kho hàng & Sản phẩm**: Quản lý chi tiết đầu sách, số lượng tồn kho (Stock/Low/Sold), giá bán, hình ảnh và trạng thái ẩn/hiện.
-- **📑 Trang nội dung (Markdown Pages)**: Viết và xuất bản các trang giới thiệu, chính sách giao hàng, điều khoản dịch vụ bằng Markdown với Live Preview.
-- **🔔 Thông báo đa kênh**: Tích hợp thông báo đơn hàng mới qua **Telegram** và **Email**.
-- **🛡️ Bảo mật cao cấp**: Giao diện Admin được bảo vệ bằng PBKDF2 hash / Cloudflare Access, chống brute-force qua Cloudflare Turnstile và Rate Limiting.
+- **⚡ Blazing Fast Performance**: Server-Side Rendered (SSR) with near-zero client-side JavaScript, instant page loads, and fully responsive across mobile, tablet, and desktop.
+- **🏷️ Smart Catalog & Full-Text Search**: Filter by categories (Business, Science, Psychology, Philosophy, etc.), sort by price / name / publication date, with SQLite FTS5 Full-Text Search.
+- **🛒 Frictionless Cart & Flexible Checkout**: Lightweight client cart, Cash on Delivery (COD), and direct Bank Transfer payment flows.
+- **📦 Inventory & Product Management**: Manage book metadata, real-time inventory tracking (In Stock / Low / Sold Out), pricing, cover media, and visibility toggles.
+- **📑 Custom Markdown Pages**: Create and publish static pages (About Us, Shipping Policy, Terms of Service) using Markdown with live preview and built-in XSS protection.
+- **🔔 Multi-Channel Notifications**: Real-time order alerts via **Telegram Bot API** and **Email** (Resend).
+- **🛡️ Enterprise-Grade Security**: Fail-closed Admin portal with PBKDF2 password hashing / Cloudflare Access, brute-force protection via Cloudflare Turnstile, and rate limiting.
+- **🤖 Built-in MCP Support**: Integrated Model Context Protocol (MCP) server for seamless AI assistant tooling and automation.
 
 ---
 
-## 🛠️ Công nghệ sử dụng (Tech Stack)
+## 🛠️ Tech Stack
 
-| Thành phần | Công nghệ |
+| Layer | Technology |
 |---|---|
 | **Frontend & Framework** | [Astro](https://astro.build) (SSR) + [React](https://react.dev) |
 | **UI Components & Styling** | [shadcn/ui](https://ui.shadcn.com), [Tailwind CSS v4](https://tailwindcss.com), [Lucide React](https://lucide.dev) |
 | **Edge Compute** | [Cloudflare Workers](https://workers.cloudflare.com/) |
-| **Cơ sở dữ liệu** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite trên Edge) |
-| **Lưu trữ tệp & Media** | [Cloudflare R2](https://developers.cloudflare.com/r2/) |
-| **Thông báo & Tích hợp** | Telegram Bot API, Resend, Cloudflare Turnstile |
+| **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (Edge SQLite) |
+| **Media & Asset Storage** | [Cloudflare R2](https://developers.cloudflare.com/r2/) |
+| **Notifications & Anti-Abuse** | Telegram Bot API, Resend, Cloudflare Turnstile |
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & Chạy cục bộ
+## 🚀 Getting Started & Local Development
 
-### Yêu cầu
-- **Node.js**: ≥ 22.12
-- **npm** hoặc **pnpm**
+### Prerequisites
 
-### Các bước cài đặt
+- **Node.js**: ≥ 22.12 (Node 22 LTS recommended)
+- **Package Manager**: `npm` or `pnpm`
 
-1. **Clone repository và cài đặt dependencies:**
+### Installation & Setup
+
+1. **Clone the repository and install dependencies:**
    ```bash
    git clone <repo-url>
    cd bookstore
    npm install
    ```
 
-2. **Khởi tạo dữ liệu cục bộ (D1 migrations & seed data):**
+2. **Provision local environment (D1 migrations & seed data):**
    ```bash
    npm run provision:local -- --seed
    ```
 
-3. **Khởi chạy môi trường phát triển (Dev Server):**
+3. **Start the development server:**
    ```bash
    npm run dev
    ```
 
-4. **Truy cập ứng dụng:**
+4. **Access the application:**
    - **Storefront**: [http://localhost:4321](http://localhost:4321)
    - **Admin Portal**: [http://localhost:4321/admin](http://localhost:4321/admin)
+   - **Cloudflare Local Explorer**: [http://localhost:4321/cdn-cgi/explorer](http://localhost:4321/cdn-cgi/explorer)
 
 ---
 
-## 📋 Các lệnh quản trị & Scripts thông dụng
+## 📋 Common Scripts & Administration
 
-| Lệnh | Chức năng |
+| Command | Description |
 |---|---|
-| `npm run dev` | Chạy dev server cục bộ |
-| `npm run build` | Build ứng dụng cho môi trường production |
-| `npm run preview` | Chạy thử bản build với Wrangler cục bộ |
-| `npm run test` | Chạy bộ kiểm thử (Vitest) |
-| `npm run db:migrate` | Áp dụng database migrations vào D1 cục bộ |
-| `npm run db:migrate:remote` | Áp dụng database migrations vào Cloudflare D1 production |
-| `npm run admin:reset` | Reset mật khẩu quản trị Admin trên môi trường local |
-| `npm run admin:reset:remote` | Reset mật khẩu quản trị Admin trên môi trường remote |
-| `npm run deploy` | Triển khai ứng dụng lên Cloudflare Workers |
+| `npm run dev` | Start Astro local development server |
+| `npm run build` | Build the application for production |
+| `npm run preview` | Run production build locally with Wrangler |
+| `npm test` | Run test suite with Vitest |
+| `npm run verify` | Full verification pipeline (Lint, Typecheck, Build, Tests) |
+| `npm run db:migrate` | Apply database migrations to local D1 |
+| `npm run db:migrate:remote` | Apply database migrations to Cloudflare D1 production |
+| `npm run admin:reset` | Reset Admin credentials in local environment |
+| `npm run admin:reset:remote` | Reset Admin credentials in remote production |
+| `npm run deploy` | Deploy application to Cloudflare Workers |
 
 ---
 
-## 📄 Bản quyền
+## 📄 License
 
-Dự án được phát hành dưới giấy phép [MIT](LICENSE).
+This project is licensed under the [MIT License](LICENSE).
