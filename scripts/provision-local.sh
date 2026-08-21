@@ -62,8 +62,8 @@ echo "▸ [2/2] Migrating + seeding the local D1…"
 # CI=1 → wrangler skips the interactive "apply N migrations?" confirmation.
 CI=1 $W d1 migrations apply DB --local
 if [[ "$SEED" == "1" ]]; then
-  [[ -f seed.sql ]] && $W d1 execute DB --local --file=./seed.sql \
-    || echo "  (--seed given but ./seed.sql not found — skipped)"
+  [[ -f scripts/sqls/seed.sql ]] && $W d1 execute DB --local --file=./scripts/sqls/seed.sql \
+    || echo "  (--seed given but ./scripts/sqls/seed.sql not found — skipped)"
 fi
 
 cat <<EOF

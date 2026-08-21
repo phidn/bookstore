@@ -18,7 +18,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 npx wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
+npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./scripts/sqls/seed.sql >/dev/null
 npx wrangler d1 execute DB --local --persist-to "$state_dir" \
   --command "INSERT INTO settings (key, value) VALUES ('setup_complete', '1');" >/dev/null
 npx wrangler d1 execute DB --local --persist-to "$state_dir" \

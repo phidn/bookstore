@@ -37,7 +37,7 @@ echo "Applying migrations…"
 npx wrangler d1 migrations apply DB --local >/dev/null
 
 echo "Seeding base catalog…"
-npx wrangler d1 execute DB --local --file ./seed.sql >/dev/null
+npx wrangler d1 execute DB --local --file ./scripts/sqls/seed.sql >/dev/null
 
 echo "Seeding storefront states…"
 npx wrangler d1 execute DB --local --file ./test/fixtures/storefront-states.sql >/dev/null

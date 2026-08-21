@@ -26,7 +26,7 @@
     "verify:theme": "node scripts/verify-theme.mjs",
     "db:migrate": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "db:seed": "wrangler d1 execute DB --local --file=./seed.sql",
+    "db:seed": "wrangler d1 execute DB --local --file=./scripts/sqls/seed.sql",
     "db:seed:local": "bash scripts/seed-local.sh",
     "db:seed:staging": "bash scripts/seed-staging.sh",
     "data:sync-staging": "bash scripts/sync-staging.sh",

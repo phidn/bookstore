@@ -19,7 +19,8 @@
   //     PAID plan + onboarded sender domain). Resend (HTTP) works on the free plan
   //     and is configured entirely in Admin → Settings → Email.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bookstore",
+  "account_id": "b22e7099a9368ee7983a9ea38bca434d",
+  "name": "tieuvienhuuthu-store",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-07-20",
   "compatibility_flags": ["nodejs_compat"],
@@ -52,19 +53,20 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "bookstore-db",
-      "database_id": "placeholder-database-id",
+      "database_name": "tieuvienhuuthu-store-db",
+      "database_id": "aa1c97c4-9833-4954-b938-2122d9871cc0",
       "migrations_dir": "migrations"
     }
   ],
   "r2_buckets": [
-    { "binding": "BUCKET", "bucket_name": "bookstore-images" },
+    { "binding": "BUCKET", "bucket_name": "tieuvienhuuthu-store-images" },
     // Private deliverables: never enable r2.dev or attach a custom domain.
-    { "binding": "FILES", "bucket_name": "bookstore-files" }
+    { "binding": "FILES", "bucket_name": "tieuvienhuuthu-store-files" }
   ],
   "vars": {
-    "STORE_NAME": "My Shop",
-    "TIME_ZONE": "UTC"
+    "STORE_NAME": "Tiểu Viện Hữu Thư",
+    "ENVIRONMENT": "production",
+    "TIME_ZONE": "Asia/Saigon"
     // Serve product images from an R2 custom domain (bypasses the Worker /images
     // route and unlocks on-demand delivery in Admin); connect a public custom
     // domain to the bucket first. See README.

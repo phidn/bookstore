@@ -67,9 +67,9 @@ if [[ "$RESET" == "1" ]]; then
   CI=1 $W d1 execute DB $TARGET --command "$RESET_SQL" >/dev/null 2>&1 || true
 fi
 
-echo "▸ [2/3] Executing seed-staging.sql on $WHERE D1…"
-[[ -f seed-staging.sql ]] || { echo "✗ seed-staging.sql not found!" >&2; exit 1; }
-CI=1 $W d1 execute DB $TARGET --file=./seed-staging.sql >/dev/null
+echo "▸ [2/3] Executing scripts/sqls/seed-staging.sql on $WHERE D1…"
+[[ -f scripts/sqls/seed-staging.sql ]] || { echo "✗ scripts/sqls/seed-staging.sql not found!" >&2; exit 1; }
+CI=1 $W d1 execute DB $TARGET --file=./scripts/sqls/seed-staging.sql >/dev/null
 
 echo "▸ [3/3] Rebuilding full-text search (FTS5) index…"
 CI=1 $W d1 execute DB $TARGET --command "INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true

@@ -1,9 +1,9 @@
 import type { D1Database } from '@cloudflare/workers-types';
-import demoSql from '../../../seed-demo.sql?raw';
+import demoSql from '../../../scripts/sqls/seed-demo.sql?raw';
 
 /**
  * Optional demo catalog (30 products across 6 categories), offered as a checkbox
- * in the first-run setup wizard. The SQL lives in ./seed-demo.sql (the same file
+ * in the first-run setup wizard. The SQL lives in scripts/sqls/seed-demo.sql (the same file
  * the CLI `db:seed` path uses) and is bundled here as a raw string so the Worker
  * can run it — every insert is `WHERE NOT EXISTS`, so it's safe to re-run.
  */

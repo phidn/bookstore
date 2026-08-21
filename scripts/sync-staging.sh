@@ -20,7 +20,7 @@ npx --yes wrangler d1 export "$DB_NAME" \
   --table product_variants \
   --table product_extras \
   --table media \
-  --output=seed-staging.sql \
+  --output=scripts/sqls/seed-staging.sql \
   -y
 
-echo "✓ seed-staging.sql updated successfully ($(wc -l < seed-staging.sql | tr -d ' ') lines)!"
+echo "✓ scripts/sqls/seed-staging.sql updated successfully ($(wc -l < scripts/sqls/seed-staging.sql | tr -d ' ') lines)!"

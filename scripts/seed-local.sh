@@ -25,8 +25,8 @@ DELETE FROM settings;
 "
 CI=1 $W d1 execute DB --local --command "$RESET_SQL" >/dev/null 2>&1 || true
 
-echo "▸ [2/3] Executing seed.sql on local D1…"
-CI=1 $W d1 execute DB --local --file=./seed.sql
+echo "▸ [2/3] Executing scripts/sqls/seed.sql on local D1…"
+CI=1 $W d1 execute DB --local --file=./scripts/sqls/seed.sql
 
 echo "▸ [3/3] Rebuilding full-text search (FTS5) index…"
 CI=1 $W d1 execute DB --local --command "INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true

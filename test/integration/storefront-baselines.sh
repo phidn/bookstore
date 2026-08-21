@@ -33,7 +33,7 @@ if [[ ! -f dist/server/wrangler.json ]]; then
 fi
 
 npx wrangler d1 migrations apply DB --local --persist-to "$state_dir" >/dev/null
-npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./seed.sql >/dev/null
+npx wrangler d1 execute DB --local --persist-to "$state_dir" --file ./scripts/sqls/seed.sql >/dev/null
 # Every product and page shape comes from the shared fixture, so the states this
 # gate protects are the same ones `npm run db:seed:storefront-states` makes
 # browsable. A shape that exists only here could never be looked at.

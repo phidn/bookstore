@@ -66,8 +66,8 @@ CI=1 $W d1 execute DB $TARGET --command "$RESET_SQL"
 CI=1 $W d1 execute DB $TARGET --command "INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true
 
 if [[ "$SEED" == "1" ]]; then
-  [[ -f seed.sql ]] && CI=1 $W d1 execute DB $TARGET --file=./seed.sql \
-    || echo "  (--seed given but ./seed.sql not found — skipped)"
+  [[ -f scripts/sqls/seed.sql ]] && CI=1 $W d1 execute DB $TARGET --file=./scripts/sqls/seed.sql \
+    || echo "  (--seed given but ./scripts/sqls/seed.sql not found — skipped)"
 fi
 
 echo "✓ $WHERE store reset to a fresh install. Open /admin/setup to configure it again."

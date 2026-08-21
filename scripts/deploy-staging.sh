@@ -9,7 +9,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 W="npx --yes wrangler"
-ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-${ACCOUNT_ID:-}}"
+ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-${ACCOUNT_ID:-b22e7099a9368ee7983a9ea38bca434d}}"
 SLUG="${SLUG:-bookstore-demo}"
 DB_NAME="${SLUG}-db"
 BUCKET="${SLUG}-images"
@@ -40,6 +40,7 @@ $W r2 bucket create "$FILES_BUCKET" 2>/dev/null || echo "    Bucket $FILES_BUCKE
 echo "▸ [3/6] Generating staging configuration..."
 cat << EOF > "$CONFIG"
 {
+  "account_id": "$ACCOUNT_ID",
   "name": "$SLUG",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-07-20",
@@ -90,10 +91,15 @@ echo "▸ [4/6] Swapping config & applying migrations to D1 $DB_NAME..."
 cp "$CONFIG" wrangler.jsonc
 
 CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" CI=1 $W d1 migrations apply DB --remote
-if [[ -f seed-staging.sql ]]; then
-  echo "    Seeding demo bookstore catalog (200+ books) into remote DB..."
-  CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" CI=1 $W d1 execute DB --remote --file=./seed-staging.sql >/dev/null
-  CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" CI=1 $W d1 execute DB --remote --command="INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true
+if [[ -f scripts/sqls/seed-staging.sql ]]; then
+  PROD_COUNT=$(CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" $W d1 execute DB --remote --command="SELECT COUNT(*) as c FROM products;" 2>/dev/null | grep -o '"c": [0-9]*' | grep -o '[0-9]*' || echo "0")
+  if [[ "${PROD_COUNT:-0}" -eq 0 ]]; then
+    echo "    Seeding demo bookstore catalog (200+ books) into remote DB..."
+    CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" CI=1 $W d1 execute DB --remote --file=./scripts/sqls/seed-staging.sql >/dev/null
+    CLOUDFLARE_ACCOUNT_ID="$ACCOUNT_ID" CI=1 $W d1 execute DB --remote --command="INSERT INTO products_fts(products_fts) VALUES('rebuild');" >/dev/null 2>&1 || true
+  else
+    echo "    Remote DB already populated (${PROD_COUNT} products), skipping re-seed."
+  fi
 fi
 
 echo "▸ [5/6] Building storefront (astro build)..."
