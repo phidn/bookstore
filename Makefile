@@ -2,6 +2,7 @@
 PORT := 4321
 PID_FILE := .bookstore.pid
 LOG_FILE := bookstore.log
+export PATH := /Users/phi/.nvm/versions/node/v22.22.2/bin:$(PATH)
 
 .PHONY: help menu run run-local run-staging run-prod stop status logs dev dev-local dev-staging dev-prod build deploy deploy-staging db-migrate db-migrate-prod db-seed seed-local seed-staging sync-staging reset-local
 

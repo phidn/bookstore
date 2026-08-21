@@ -1,0 +1,168 @@
+---
+import type { ProductCardModel } from '../../features/storefront/models';
+import StoreImage from '../../features/storefront/controls/StoreImage.astro';
+
+/**
+ * STORE-OWNED. Edit freely — this file belongs to your store.
+ *
+ * Homepage for Tiểu Viện Hữu Thư.
+ * Sections:
+ *   1. Hero banner — full-width promo with tagline and CTA
+ *   2. Trust bar — shipping / quality / books info
+ *   3. Favourite books — horizontal scroll carousel
+ *   4. Browse all CTA
+ */
+
+interface Props {
+  /** Latest / featured products to show in the favourite books row. */
+  featuredBooks: ProductCardModel[];
+  /** Store name for the hero heading. */
+  storeName?: string;
+}
+
+const { featuredBooks, storeName = 'Tiểu Viện Hữu Thư' } = Astro.props;
+---
+
+{/* ── Hero Banner ──────────────────────────────────────────────────────── */}
+<section
+  class="hero-banner relative overflow-hidden rounded-2xl bg-brand"
+  aria-label="Banner chào mừng"
+>
+  {/* Decorative book-spine pattern (SVG inline, no network request). */}
+  <svg
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-0 h-full w-full opacity-10"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <defs>
+      <pattern id="book-grid" width="48" height="48" patternUnits="userSpaceOnUse">
+        <rect x="4" y="4" width="10" height="40" rx="2" fill="currentColor" opacity=".6" />
+        <rect x="18" y="8" width="8" height="36" rx="2" fill="currentColor" opacity=".4" />
+        <rect x="30" y="2" width="14" height="44" rx="2" fill="currentColor" opacity=".5" />
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#book-grid)" />
+  </svg>
+
+  <div class="relative mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-20 text-center text-on-brand sm:py-28">
+    <p class="text-xs uppercase tracking-[0.3em] opacity-80">Chào mừng đến với</p>
+    <h1 class="font-serif text-4xl leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+      {storeName}
+    </h1>
+    <p class="max-w-lg text-base opacity-90 sm:text-lg">
+      Một tiểu viện nhỏ có nhiều chuyện để nói với nhau nghe.<br />
+      Chúng tôi có bán sách cũ — những cuốn đã được yêu thương.
+    </p>
+    <div class="mt-2 flex flex-wrap justify-center gap-4">
+      <a
+        href="/products"
+        class="inline-flex items-center gap-2 rounded-full bg-on-brand px-7 py-3 font-serif text-sm font-medium text-brand transition-opacity hover:opacity-90"
+      >
+        Khám phá sách
+      </a>
+      <a
+        href="/pages/about"
+        class="inline-flex items-center gap-2 rounded-full border border-on-brand/50 px-7 py-3 text-sm text-on-brand/90 transition-colors hover:border-on-brand hover:text-on-brand"
+      >
+        Về tiểu viện
+      </a>
+    </div>
+  </div>
+</section>
+
+{/* ── Trust bar ────────────────────────────────────────────────────────── */}
+<div class="my-10 grid grid-cols-1 divide-y divide-line rounded-xl border border-line bg-surface sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+  {[
+    { icon: '📦', label: 'Giao hàng toàn quốc', sub: 'Ship nhanh chóng, đóng gói cẩn thận' },
+    { icon: '📖', label: 'Sách cũ chất lượng', sub: 'Được kiểm tra kỹ trước khi đến tay bạn' },
+    { icon: '💌', label: 'Nhiều chuyện để kể', sub: 'Mỗi cuốn sách đều có câu chuyện riêng' },
+  ].map(({ icon, label, sub }) => (
+    <div class="flex items-center gap-4 px-6 py-5">
+      <span class="text-2xl">{icon}</span>
+      <div>
+        <p class="text-sm font-medium text-ink">{label}</p>
+        <p class="text-xs text-muted">{sub}</p>
+      </div>
+    </div>
+  ))}
+</div>
+
+{/* ── Favourite books carousel ─────────────────────────────────────────── */}
+{
+  featuredBooks.length > 0 && (
+    <section aria-labelledby="fav-heading" class="my-6">
+      <div class="mb-6 flex items-baseline justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-[0.25em] text-muted">Bộ sưu tập</p>
+          <h2
+            id="fav-heading"
+            class="mt-1 font-serif text-3xl tracking-tight sm:text-4xl"
+          >
+            Những cuốn sách yêu thích
+          </h2>
+        </div>
+        <a
+          href="/products"
+          class="shrink-0 text-sm text-brand underline-offset-2 hover:underline"
+        >
+          Xem tất cả
+        </a>
+      </div>
+
+      {/* Horizontal scroll — no JS needed; CSS scroll-snap on mobile, visible grid on
+          wider screens. The no-scrollbar utility hides the bar without removing
+          scroll functionality. */}
+      <div
+        class="no-scrollbar -mx-6 flex gap-5 overflow-x-auto px-6 pb-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+        role="list"
+      >
+        {featuredBooks.map((book, i) => (
+          <div
+            role="listitem"
+            class="reveal w-[200px] shrink-0 sm:w-auto"
+            style={`animation-delay:${Math.min(i, 8) * 60}ms`}
+          >
+            <a href={book.href} class="group block">
+              <div class="relative overflow-hidden rounded-lg bg-surface shadow-sm ring-1 ring-line transition-shadow group-hover:shadow-md">
+                <StoreImage
+                  image={book.image}
+                  class={`aspect-[2/3] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]${book.inStock ? '' : ' opacity-60'}`}
+                />
+                {!book.inStock && (
+                  <span class="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-xs uppercase tracking-widest text-muted ring-1 ring-line">
+                    Hết hàng
+                  </span>
+                )}
+              </div>
+              <div class="mt-3 px-0.5">
+                <h3 class="line-clamp-2 text-sm font-medium leading-snug tracking-tight text-ink">
+                  {book.name}
+                </h3>
+                <p class="mt-1 text-sm tabular-nums text-muted">{book.formattedPrice}</p>
+                <p class="mt-2 text-xs uppercase tracking-widest text-brand">
+                  Thêm vào giỏ →
+                </p>
+              </div>
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+{/* ── Browse all CTA ───────────────────────────────────────────────────── */}
+<div class="my-16 flex flex-col items-center gap-4 rounded-2xl border border-line bg-surface px-6 py-12 text-center">
+  <p class="font-serif text-2xl tracking-tight text-ink sm:text-3xl">
+    Tìm cuốn sách tiếp theo của bạn
+  </p>
+  <p class="max-w-sm text-sm text-muted">
+    Duyệt toàn bộ kho sách cũ — mỗi tuần có thêm sách mới về.
+  </p>
+  <a
+    href="/products"
+    class="mt-2 inline-flex items-center gap-2 rounded-full bg-brand px-8 py-3 text-sm font-medium text-on-brand transition-colors hover:bg-brand-hover"
+  >
+    Xem toàn bộ sách
+  </a>
+</div>
