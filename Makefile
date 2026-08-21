@@ -198,7 +198,7 @@ build: ## Build bookstore cho production
 	@npm run build
 
 deploy: ## Deploy bookstore lên Cloudflare Production
-	@CLOUDFLARE_ACCOUNT_ID=b22e7099a9368ee7983a9ea38bca434d npm run deploy
+	@npm run deploy
 
 deploy-staging: ## Deploy bookstore lên Cloudflare Staging Demo (bookstore-demo.phidang.work)
 	@npm run deploy:staging
