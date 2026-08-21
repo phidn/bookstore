@@ -334,7 +334,15 @@ SELECT p.id, c.id FROM products p, categories c WHERE p.slug = 'tu-duy-nhanh-va-
 INSERT OR IGNORE INTO product_categories (product_id, category_id)
 SELECT p.id, c.id FROM products p, categories c WHERE p.slug = 'tu-tot-den-vi-dai' AND c.slug = 'kinh-doanh';
 
--- ── 4. Static Markdown Pages ──────────────────────────────────────────────────
+-- ── 4. Settings ───────────────────────────────────────────────────────────────
+INSERT OR REPLACE INTO settings (key, value) VALUES
+  ('store_name', 'Tiểu Viện Hữu Thư'),
+  ('time_zone', 'Asia/Saigon'),
+  ('setup_complete', '1'),
+  ('store_url', 'https://bookstore-demo.phidang.work'),
+  ('logo_image_key', '/logo.png');
+
+-- ── 5. Static Markdown Pages ──────────────────────────────────────────────────
 INSERT OR IGNORE INTO pages (title, slug, body_markdown, published)
 VALUES (
   'Về Chúng Tôi (About Bookstore)',
@@ -351,21 +359,16 @@ VALUES (
   1
 );
 
--- ── 5. Navigation Menu ────────────────────────────────────────────────────────
+-- ── 6. Navigation Menu ────────────────────────────────────────────────────────
 INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
-SELECT 'header', 'category', c.id, c.name, 1 FROM categories c WHERE c.slug = 'van-hoc';
-INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
-SELECT 'header', 'category', c.id, c.name, 2 FROM categories c WHERE c.slug = 'triet-hoc';
-INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
-SELECT 'header', 'category', c.id, c.name, 3 FROM categories c WHERE c.slug = 'khoa-hoc';
-INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
-SELECT 'header', 'category', c.id, c.name, 4 FROM categories c WHERE c.slug = 'tam-ly';
+SELECT 'header', 'page', p.id, 'Giới thiệu', 1 FROM pages p WHERE p.slug = 'about';
 INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
 SELECT 'footer', 'page', p.id, p.title, 1 FROM pages p WHERE p.slug = 'about';
 INSERT OR IGNORE INTO menu_items (location, target_type, target_id, label, position)
 SELECT 'footer', 'page', p.id, p.title, 2 FROM pages p WHERE p.slug = 'shipping-policy';
 
--- ── 6. Fixture Normalization (public_id) ──────────────────────────────────────
+-- ── 7. Fixture Normalization (public_id & book covers) ────────────────────────
+UPDATE products         SET image_key = '/covers/' || slug || '.svg';
 UPDATE products         SET public_id = 'prod_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;
 UPDATE categories       SET public_id = 'cat_'  || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;
 UPDATE pages            SET public_id = 'page_' || lower(substr(hex(randomblob(10)),1,10)) WHERE public_id IS NULL;

@@ -7,5 +7,13 @@
  * route; otherwise a root-relative `/images/...` path.
  */
 export function mediaUrl(imageKey: string, baseUrl = ''): string {
+  if (!imageKey) return '/placeholder.png';
+  if (
+    imageKey.startsWith('http://') ||
+    imageKey.startsWith('https://') ||
+    imageKey.startsWith('/')
+  ) {
+    return imageKey;
+  }
   return baseUrl ? `${baseUrl}/${imageKey}` : `/images/${imageKey}`;
 }
